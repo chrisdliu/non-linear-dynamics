@@ -34,7 +34,6 @@ class Window(pyglet.window.Window):
         self.setvars()
         self.render()
         self.renderscreen()
-        self.renderoverlay()
 
     def on_draw(self):
         print('drawing')

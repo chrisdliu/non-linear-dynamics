@@ -21,10 +21,13 @@ def dynamic(n):
         next = getsum(orbit[-1])
     orbit.append(next)
     last = orbit[-1]
-    print(orbit)
+    return last
 
-max = 0
-for i in range(1, 486):
-    if getsum(i) > max:
-        print(i)
-        max = getsum(i)
+count = 0
+for x in range(163, 100000):
+    last = dynamic(x)
+    if last == 1:
+        #print(x)
+        count += 1
+
+print(count / (100000 - 163))
