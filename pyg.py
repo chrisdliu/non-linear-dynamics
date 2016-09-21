@@ -26,9 +26,10 @@ class Button():
 
 
 class Window(pyglet.window.Window):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, bg=(0, 0, 0, 1), *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.set_minimum_size(600, 800)
+        self.set_minimum_size(kwargs['width'], kwargs['height'])
+        glClearColor(bg[0], bg[1], bg[2], bg[3])
         self.batch = pyglet.graphics.Batch()
         self.buttons = []
         self.setvars()
@@ -68,3 +69,32 @@ class Window(pyglet.window.Window):
         for button in self.buttons:
             if button.is_inside(x, y):
                 button.click()
+
+class Window2(pyglet.window.Window):
+    def __init__(self, caption='Window', bg=(0, 0, 0, 1), *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.set_minimum_size(kwargs['width'], kwargs['height'])
+        glClearColor(bg[0], bg[1], bg[2], bg[3])
+        self.batch = pyglet.graphics.Batch()
+        self.setvars()
+        self.render()
+
+    def on_mouse_release(self, x, y, button, modifiers):
+        self.mouse_release(x, y, button, modifiers)
+
+    def on_draw(self):
+        print('drawing')
+        self.clear()
+        self.render()
+        #glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        self.batch.draw()
+
+    #to be overriden
+    def setvars(self):
+        pass
+
+    def render(self):
+        pass
+
+    def mouse_release(self, x, y, button, modifiers):
+        print('click: ' + str(x) + ', ' + str(y))
