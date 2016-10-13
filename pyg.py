@@ -13,7 +13,6 @@ class Window(pyglet.window.Window):
         self.renderscreen()
 
     def on_draw(self):
-        print('drawing')
         self.clear()
         glClear(GL_COLOR_BUFFER_BIT)
         self.batch.draw()
@@ -68,13 +67,17 @@ class Button:
     def render(self, batch):
         if self.vertex_list:
             self.vertex_list.delete()
-        self.vertex_list = batch.add(4, GL_QUADS, None,
+        self.vertex_list = batch.add(4, GL_QUADS, pyglet.graphics.OrderedGroup(2),
             ('v2f', (self.x, self.y, self.x + self.w, self.y, self.x + self.w, self.y + self.h, self.x, self.y + self.h)),
             ('c3B', (100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100)))
 
     def draw_label(self):
         self.label.draw()
 
+'''
+make button and screen holder dictionaries
+make label class and put that in dictionaries as well
+'''
 
 class Screen:
     def __init__(self, x, y, width, height, bg=(255, 255, 255)):
@@ -82,6 +85,11 @@ class Screen:
         self.y = y
         self.w = width
         self.h = height
+        self.sx = .5
+        self.sy = .5
+        self.sw = 1
+        self.sh = 1
+        self.mousedown = False
 
         self.batch = pyglet.graphics.Batch()
         self.vertex_lists = {}
@@ -97,21 +105,24 @@ class Screen:
         self.setbg(bg)
         self.setvars()
 
+    def onplot(self, px, py):
+        return ((px - self.sx + self.sw / 2) * self.w / self.sw, (py - self.sy + self.sh / 2) * self.h / self.sh)
+
     def setbg(self, color):
         if 'bg' not in self.vertex_lists.keys():
             self.vertex_lists['bg'] = None
         if self.vertex_lists['bg']:
             self.vertex_lists['bg'].delete()
-        self.vertex_lists['bg'] = self.batch.add(4, GL_QUADS, pyglet.graphics.OrderedGroup(0), (
-            'v2f', (self.x, self.y, self.x, self.y + self.h, self.x + self.w, self.y + self.h, self.x + self.w, self.y)),
+        self.vertex_lists['bg'] = self.batch.add(4, GL_QUADS, pyglet.graphics.OrderedGroup(0),
+            ('v2f', (self.x, self.y, self.x, self.y + self.h, self.x + self.w, self.y + self.h, self.x + self.w, self.y)),
             ('c3B', color * 4))
 
-    def add_point(self, x, y, color=(0, 0, 0)):
-        self.vertexes['points'].extend((x + self.x, y + self.y))
+    def add_point(self, x, y, z=0, color=(0, 0, 0)):
+        self.vertexes['points'].extend((x + self.x, y + self.y, z))
         self.colors['points'].extend(color)
 
-    def add_line(self, x1, y1, x2, y2, color=(0, 0, 0)):
-        self.vertexes['lines'].extend((x1 + self.x, y1 + self.y, x2 + self.x, y2 + self.y))
+    def add_line(self, x1, y1, x2, y2, z=0, color=(0, 0, 0)):
+        self.vertexes['lines'].extend((x1 + self.x, y1 + self.y, z, x2 + self.x, y2 + self.y, z))
         self.colors['lines'].extend(color * 2)
 
     def flush(self):
@@ -121,11 +132,11 @@ class Screen:
                 self.vertex_lists[type] = None
             vlist = None
             if type == 'points':
-                vlist = self.batch.add(len(self.vertexes[type]) // 2, GL_POINTS, pyglet.graphics.OrderedGroup(1),
-                    ('v2f', self.vertexes[type]), ('c3B', self.colors[type]))
+                vlist = self.batch.add(len(self.vertexes[type]) // 3, GL_POINTS, pyglet.graphics.OrderedGroup(1),
+                    ('v3f', self.vertexes[type]), ('c3B', self.colors[type]))
             elif type == 'lines':
-                vlist = self.batch.add(len(self.vertexes[type]) // 4, GL_LINES, pyglet.graphics.OrderedGroup(1),
-                    ('v2f', self.vertexes[type]), ('c3B', self.colors[type]))
+                vlist = self.batch.add(len(self.vertexes[type]) // 3, GL_LINES, pyglet.graphics.OrderedGroup(1),
+                    ('v3f', self.vertexes[type]), ('c3B', self.colors[type]))
             self.vertex_lists[type] = vlist
 
         self.clearbuffer()
@@ -148,12 +159,16 @@ class Screen:
     def on_resize(self, width, height):
         pass
 
+    def tick(self):
+        pass
+
 
 class Window2(pyglet.window.Window):
     def __init__(self, width=600, height=600, caption='Window', bg=(0, 0, 0, 1), *args, **kwargs):
         super().__init__(width=width, height=height, caption=caption, *args, **kwargs)
         self.set_minimum_size(width, height)
         glClearColor(bg[0], bg[1], bg[2], bg[3])
+        self.mousedown = False
 
         # batch for the window
         # no vertex_list for window
@@ -163,6 +178,7 @@ class Window2(pyglet.window.Window):
         self.labels = []
 
         self.setvars()
+        pyglet.clock.schedule_interval(self.tick, 0.1)
         self.render()
 
     def on_mouse_release(self, x, y, button, modifiers):
@@ -170,6 +186,7 @@ class Window2(pyglet.window.Window):
 
     def on_draw(self):
         print('drawing')
+        self.redraw_labels()
         self.clear()
         self.batch.draw()
         for screen in self.screens:
@@ -204,3 +221,10 @@ class Window2(pyglet.window.Window):
             if b.is_inside(x, y):
                 b.mouse_up()
         print('click: ' + str(x) + ', ' + str(y))
+
+    def redraw_labels(self):
+        pass
+
+    def tick(self, dt):
+        for screen in self.screens:
+            screen.tick()
