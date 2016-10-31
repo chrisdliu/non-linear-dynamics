@@ -116,16 +116,16 @@ class NumField(Field):
         self.high = high
 
     def is_valid(self, pvalue):
-        if 'u' in self.limit:
+        if 'l' in self.limit:
             print(self.inclusive)
-            if 'u' in self.inclusive:
+            if 'l' in self.inclusive:
                 if self.low > pvalue:
                     return False
             else:
                 if self.low >= pvalue:
                     return False
-        elif 'l' in self.limit:
-            if 'l' in self.inclusive:
+        elif 'u' in self.limit:
+            if 'u' in self.inclusive:
                 if pvalue > self.high:
                     return False
             else:

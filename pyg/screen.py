@@ -60,6 +60,9 @@ class Screen:
     def get_val(self, name):
         return self.valset.get_val(name)
 
+    def get_obj(self, name):
+        return self.valset.get_obj(name)
+
     def set_bg(self, color):
         if 'bg' not in self.vertex_lists.keys():
             self.vertex_lists['bg'] = None
@@ -170,6 +173,13 @@ class GraphScreen(Screen):
         self.drag = False
         self.offsx = 0
         self.offsy = 0
+        self.reset()
+
+    def reset(self):
+        self.sx = .5
+        self.sy = .5
+        self.sw = 1
+        self.sh = 1
 
     def up(self):
         self.sy += self.sh / 5

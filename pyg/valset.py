@@ -5,6 +5,12 @@ class NumValue:
     def __str__(self):
         return str(self.value)
 
+    def incr(self):
+        self.value += 1
+
+    def decr(self):
+        self.value -= 1
+
 
 class ValSet:
     def __init__(self):
