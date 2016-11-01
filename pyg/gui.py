@@ -106,6 +106,10 @@ class NumField(Field):
         win.key.NUM_9: '9',
         win.key.PERIOD: '.',
         win.key.NUM_DECIMAL: '.',
+        win.key.PLUS: '+',
+        win.key.NUM_ADD: '+',
+        win.key.J: 'j',
+        win.key.MINUS: '-',
     }
 
     def __init__(self, x, y, w, h, name, value, batch, limit='', inclusive='ul', low=0, high=1):
@@ -117,7 +121,6 @@ class NumField(Field):
 
     def is_valid(self, pvalue):
         if 'l' in self.limit:
-            print(self.inclusive)
             if 'l' in self.inclusive:
                 if self.low > pvalue:
                     return False
@@ -156,6 +159,21 @@ class IntField(NumField):
     def parse(self):
         try:
             pvalue = int(self.input)
+        except ValueError:
+            self.input = ''
+            return
+        self.input = ''
+        if self.is_valid(pvalue):
+            self.value.value = pvalue
+
+
+class ComplexField(NumField):
+    def value_str(self):
+        return str(self.value.value)
+
+    def parse(self):
+        try:
+            pvalue = complex(self.input)
         except ValueError:
             self.input = ''
             return

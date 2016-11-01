@@ -1,6 +1,5 @@
 import pyg
 import pyglet
-import cProfile
 
 
 class ComplexScreen(pyg.screen.GraphScreen):
@@ -25,9 +24,12 @@ class ComplexScreen(pyg.screen.GraphScreen):
             for qy in range(hqw * 2 + 1):
                 z = ((qx - hqw) / hqw) + ((qy - hqw) / hqw) * j
                 ovf = False
+                power = self.get_val('power')
+                c = self.get_val('c')
                 for i in range(self.get_val('n')):
                     try:
-                        z **= self.get_val('power')
+                        z **= power
+                        z += c
                     except OverflowError:
                         ovf = True
                 if ovf:
@@ -57,13 +59,14 @@ class ComplexWindow(pyg.window.Window):
         self.valset.add_value('n', 0)
         self.valset.add_value('power', 2)
         self.valset.add_value('hqw', 100)
+        self.valset.add_value('c', 0+0j)
         screen = ComplexScreen(0, 200, 500, 500, valset=self.valset)
         self.add_screen('main', screen)
-        self.add_int_field('n', 260, 115, 100, 15, 'N', self.valset.get_obj('n'), limit='u', low=0)
+        self.add_int_field('n', 260, 115, 100, 15, 'N', self.valset.get_obj('n'), limit='l', low=0)
         self.add_float_field('power', 260, 135, 100, 15, 'Power', self.valset.get_obj('power'), limit='l', inclusive='', low=0)
-        self.add_int_field('hqw', 260, 155, 100, 15, 'HQW', self.valset.get_obj('hqw'))
+        self.add_int_field('hqw', 260, 155, 100, 15, 'Quality', self.valset.get_obj('hqw'))
+        self.add_complex_field('c', 260, 95, 100, 15, 'C', self.valset.get_obj('c'))
 
 
-print((1+0j) ** 2)
 window = ComplexWindow(width=500, height=700, caption='Complex Graph', bg=(0, 0, 0, 1), resizable=True)
 pyglet.app.run()

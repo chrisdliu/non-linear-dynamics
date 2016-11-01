@@ -43,6 +43,9 @@ class Window(win.Window):
     def add_int_field(self, name, x, y, w, h, field_name, value, limit='', inclusive='ul', low=0, high=1):
         self.fields[name] = IntField(x, y, w, h, field_name, value, self.batch, limit, inclusive, low, high)
 
+    def add_complex_field(self, name, x, y, w, h, field_name, value, limit='', inclusive='ul', low=0, high=1):
+        self.fields[name] = ComplexField(x, y, w, h, field_name, value, self.batch, limit, inclusive, low, high)
+
     def on_draw(self):
         self.update_labels()
         self.clear()
