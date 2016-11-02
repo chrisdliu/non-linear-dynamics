@@ -133,6 +133,14 @@ class Screen:
         self.bg_group.h = self.h
         self.set_bg(self.bg)
 
+    def set_coords(self, x, y):
+        self.x = x
+        self.y = y
+        self.group.x = x
+        self.group.y = y
+        self.bg_group.x = x
+        self.bg_group.y = y
+
     # to be overriden
     # render should add points, then flush to the batch
     def render(self):

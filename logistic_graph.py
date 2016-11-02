@@ -48,12 +48,12 @@ def get_next(a, x):
 
 class LogisticScreen(pyg.screen.GraphScreen):
     def __init__(self, x, y, width, height, bg=(255, 255, 255), valset=None):
+        self.mode = 0  # 0-bifurcation 1-cobweb 2-time series
         super().__init__(x, y, width, height, bg=bg, valset=valset)
         self.runcobweb = False
         self.cobwebframe = []
         self.fpoints = []
         self.setfpoints()
-        self.mode = 0  # 0-bifurcation 1-cobweb 2-time series
         self.set_mode(1, None)
 
         # 3.630315,0.769489 @ 0.000015,0.000015

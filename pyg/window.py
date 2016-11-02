@@ -86,6 +86,9 @@ class Window(win.Window):
     def on_key_release(self, symbol, modifiers):
         self.key_up(symbol, modifiers)
 
+    def on_text(self, text):
+        self.text_input(text)
+
     # for subclasses
     def mouse_move(self, x, y, dx, dy):
         for screen in self.screens.values():
@@ -130,18 +133,23 @@ class Window(win.Window):
         print('click: ' + str(x) + ', ' + str(y))
 
     def key_down(self, symbol, modifiers):
-        for screen in self.screens.values():
-            screen.key_down(symbol, modifiers)
         if self.focus:
-            self.focus.key_press(symbol, modifiers)
+            self.focus.key_down(symbol, modifiers)
             if symbol == win.key.ENTER:
-                self.focus.exit()
                 self.focus = None
                 self.render()
+        else:
+            for screen in self.screens.values():
+                screen.key_down(symbol, modifiers)
 
     def key_up(self, symbol, modifiers):
         for screen in self.screens.values():
             screen.key_up(symbol, modifiers)
+
+    def text_input(self, text):
+        if self.focus:
+            print(text)
+            self.focus.text_input(text)
 
     def tick(self, dt):
         for screen in self.screens.values():

@@ -5,7 +5,7 @@ import pyglet.graphics as graphics
 
 
 class Field:
-    to_string = {
+    accepted = {
     }
 
     def __init__(self, x, y, w, h, name, value, batch):
@@ -17,37 +17,39 @@ class Field:
         self.value = value
         self.input = ''
         self.batch = batch
-        self.focus = False
+        self.is_focus = False
         self.vertex_list = None
         self.label = Label(x, y, self.get_label_text(), batch)
 
     def get_label_text(self):
-        if self.focus:
+        if self.is_focus:
             return '%s: %s' % (self.name, self.input)
         else:
             return '%s: %s' % (self.name, self.value_str())
 
     def enter(self):
         print('entered')
-        self.focus = True
+        self.is_focus = True
         self.input = ''
         self.render()
 
     def exit(self):
         print('exited')
-        self.focus = False
+        self.is_focus = False
         self.parse()
         self.render()
 
-    def key_press(self, symbol, modifiers):
-        if self.focus:
-            if symbol == win.key.BACKSPACE:
-                if len(self.input) > 0:
-                    self.input = self.input[:-1]
-            else:
-                if symbol in self.to_string.keys():
-                    string = self.to_string[symbol]
-                    self.input += string
+    def key_down(self, symbol, modifiers):
+        if symbol == win.key.ENTER:
+            self.exit()
+        elif symbol == win.key.BACKSPACE:
+            if len(self.input) > 0:
+                self.input = self.input[:-1]
+        self.update_label()
+    
+    def text_input(self, text):
+        if text in self.accepted:
+            self.input += text
         self.update_label()
 
     def update_label(self):
@@ -58,7 +60,7 @@ class Field:
 
     def render(self):
         self.update_label()
-        if self.focus:
+        if self.is_focus:
             if self.vertex_list:
                 self.vertex_list.delete()
             self.vertex_list = self.batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
@@ -83,34 +85,22 @@ class Field:
 
 
 class NumField(Field):
-    to_string = {
-        win.key._0: '0',
-        win.key._1: '1',
-        win.key._2: '2',
-        win.key._3: '3',
-        win.key._4: '4',
-        win.key._5: '5',
-        win.key._6: '6',
-        win.key._7: '7',
-        win.key._8: '8',
-        win.key._9: '9',
-        win.key.NUM_0: '0',
-        win.key.NUM_1: '1',
-        win.key.NUM_2: '2',
-        win.key.NUM_3: '3',
-        win.key.NUM_4: '4',
-        win.key.NUM_5: '5',
-        win.key.NUM_6: '6',
-        win.key.NUM_7: '7',
-        win.key.NUM_8: '8',
-        win.key.NUM_9: '9',
-        win.key.PERIOD: '.',
-        win.key.NUM_DECIMAL: '.',
-        win.key.PLUS: '+',
-        win.key.NUM_ADD: '+',
-        win.key.J: 'j',
-        win.key.MINUS: '-',
-    }
+    accepted = [
+        '0',
+        '1',
+        '2',
+        '3',
+        '4',
+        '5',
+        '6',
+        '7',
+        '8',
+        '9',
+        '.',
+        '+',
+        '-',
+        'j',
+    ]
 
     def __init__(self, x, y, w, h, name, value, batch, limit='', inclusive='ul', low=0, high=1):
         super().__init__(x, y, w, h, name, value, batch)
@@ -127,7 +117,7 @@ class NumField(Field):
             else:
                 if self.low >= pvalue:
                     return False
-        elif 'u' in self.limit:
+        if 'u' in self.limit:
             if 'u' in self.inclusive:
                 if pvalue > self.high:
                     return False

@@ -8,6 +8,7 @@ class ComplexScreen(pyg.screen.GraphScreen):
         self.sy = 0
         self.sw = 10
         self.sh = 10
+        self.render()
 
     def render(self):
         lx1, ly1 = self.on_screen(0, -10)
@@ -41,13 +42,13 @@ class ComplexScreen(pyg.screen.GraphScreen):
         self.flush()
 
     def key_down(self, symbol, modifiers):
+        super().key_down(symbol, modifiers)
         if symbol == pyglet.window.key.K:
             self.get_obj('n').incr()
             self.render()
         elif symbol == pyglet.window.key.J:
             self.get_obj('n').decr()
             self.render()
-        # cProfile.run('window.screens[\'main\'].render()')
 
     def resize(self, width, height):
         self.refit(width, height - 200)
@@ -66,6 +67,7 @@ class ComplexWindow(pyg.window.Window):
         self.add_float_field('power', 260, 135, 100, 15, 'Power', self.valset.get_obj('power'), limit='l', inclusive='', low=0)
         self.add_int_field('hqw', 260, 155, 100, 15, 'Quality', self.valset.get_obj('hqw'))
         self.add_complex_field('c', 260, 95, 100, 15, 'C', self.valset.get_obj('c'))
+        self.add_button('resetb', 190, 120, 40, 40, 'Reset', self.screens['main'].reset)
 
 
 window = ComplexWindow(width=500, height=700, caption='Complex Graph', bg=(0, 0, 0, 1), resizable=True)
