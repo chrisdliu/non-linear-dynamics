@@ -24,3 +24,6 @@ class ValSet:
 
     def get_val(self, name):
         return self.vals[name].value
+
+    def set_val(self, name, value):
+        self.vals[name].value = value

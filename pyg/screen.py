@@ -1,6 +1,8 @@
 import pyglet.gl as gl
 import pyglet.window as win
 import pyglet.graphics as graphics
+import numpy as np
+import time
 
 
 class ScreenGroup(graphics.OrderedGroup):
@@ -60,6 +62,9 @@ class Screen:
     def get_val(self, name):
         return self.valset.get_val(name)
 
+    def set_val(self, name, value):
+        self.valset.set_val(name, value)
+
     def get_obj(self, name):
         return self.valset.get_obj(name)
 
@@ -76,9 +81,27 @@ class Screen:
         self.vertexes['points'].extend((x, y, z))
         self.colors['points'].extend(color)
 
+    def add_points(self, points, colors):
+        self.vertexes['points'].extend(points)
+        self.colors['points'].extend(colors)
+
+    def set_points_both(self, points, colors):
+        self.vertexes['points'] = points
+        self.colors['points'] = colors
+
+    def set_points_points(self, points):
+        self.vertexes['points'] = points
+
+    def set_points_colors(self, colors):
+        self.colors['points'] = colors
+
     def add_line(self, x1, y1, x2, y2, z=0, color=(0, 0, 0)):
         self.vertexes['lines'].extend((x1, y1, z, x2, y2, z))
         self.colors['lines'].extend(color * 2)
+
+    def set_lines_both(self, lines, colors):
+        self.vertexes['lines'] = lines
+        self.colors['lines'] = colors
 
     def add_triangle(self, x1, y1, x2, y2, x3, y3, z=0, color=(0, 0, 0), uniform=True, colors=((0,) * 9)):
         self.vertexes['triangles'].extend((x1, y1, z, x2, y2, z, x3, y3, z))
@@ -181,9 +204,13 @@ class GraphScreen(Screen):
         self.drag = False
         self.offsx = 0
         self.offsy = 0
-        self.reset()
+        self.reset_graph()
 
     def reset(self):
+        self.reset_graph()
+        self.render()
+
+    def reset_graph(self):
         self.sx = .5
         self.sy = .5
         self.sw = 1
@@ -238,13 +265,13 @@ class GraphScreen(Screen):
             self.sy = self.sy - self.sh / 2 + y * self.sh / self.h
             self.sw *= self.get_val('sz')
             self.sh *= self.get_val('sz')
-            print('zoomed to %.5f,%.5f with size %.5f,%.5f' % (self.sx, self.sy, self.sw, self.sh))
+            print('zoomed to %.5f,%.5f with size %.9f,%.9f' % (self.sx, self.sy, self.sw, self.sh))
         elif button == win.mouse.RIGHT:
             self.sx = self.sx - self.sw / 2 + x * self.sw / self.w
             self.sy = self.sy - self.sh / 2 + y * self.sh / self.h
             self.sw /= self.get_val('sz')
             self.sh /= self.get_val('sz')
-            print('zoomed to %.5f,%.5f with size %.5f,%.5f' % (self.sx, self.sy, self.sw, self.sh))
+            print('zoomed to %.5f,%.5f with size %.9f,%.9f' % (self.sx, self.sy, self.sw, self.sh))
         elif button == win.mouse.MIDDLE:
             self.drag = False
             msx1, msy1 = self.on_plot(self.mdownx, self.mdowny)

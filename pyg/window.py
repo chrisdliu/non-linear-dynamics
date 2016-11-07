@@ -23,7 +23,6 @@ class Window(win.Window):
         self.set_vars()
         self.update_labels()
         clock.schedule_interval(self.tick, 0.1)
-        self.render()
 
     def add_screen(self, name, screen):
         self.screens[name] = screen
@@ -148,7 +147,6 @@ class Window(win.Window):
 
     def text_input(self, text):
         if self.focus:
-            print(text)
             self.focus.text_input(text)
 
     def tick(self, dt):
