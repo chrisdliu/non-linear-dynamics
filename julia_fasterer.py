@@ -187,6 +187,7 @@ class JuliaScreen(pyg.screen.GraphScreen):
     def __init__(self, x, y, width, height, bg=(255, 255, 255), valset=None):
         self.mode = 0
         self.points = []
+        self.mouse_c = False
         super().__init__(x, y, width, height, bg=bg, valset=valset)
 
     def reset_graph(self):
@@ -198,6 +199,9 @@ class JuliaScreen(pyg.screen.GraphScreen):
     def set_mode(self, mode):
         self.mode = mode
         self.render()
+
+    def toggle_mouse_c(self):
+        self.mouse_c = not self.mouse_c
 
     def set_graph_points(self):
         bl_x, bl_y = self.on_plot(0, 0)
@@ -238,7 +242,7 @@ class JuliaScreen(pyg.screen.GraphScreen):
         self.refit(width, height - 200)
 
     def mouse_move(self, x, y, dx, dy):
-        if self.is_inside(x + self.x, y + self.y):
+        if self.is_inside(x + self.x, y + self.y) and self.mouse_c:
             cx, cy = self.on_plot(x, y)
             self.set_val('c', cx + cy * 1j)
             self.render()
@@ -267,6 +271,7 @@ class JuliaWindow(pyg.window.Window):
         self.add_complex_field('c', 230, 75, 100, 15, 'C', self.valset.get_obj('c'))
 
         self.add_button('resetb', 150, 120, 40, 40, 'Reset', self.screens['main'].reset)
+        self.add_button('mouse_c', 150, 60, 40, 40, 'Mouse C', self.screens['main'].toggle_mouse_c)
         self.add_button('m1b', 50, 130, 80, 20, 'Julia z^2+c', lambda: self.screens['main'].set_mode(0))
         self.add_button('m2b', 50, 100, 80, 20, 'Mandelbrot', lambda: self.screens['main'].set_mode(1))
         self.add_button('m3b', 50, 70, 80, 20, 'Julia z^3+c', lambda: self.screens['main'].set_mode(2))
@@ -302,6 +307,11 @@ class JuliaWindow(pyg.window.Window):
         self.labels['calclabel'].set_pos(self.screens['main'].w - 160, 110)
         self.labels['flushlabel'].set_text(' flush time: %.5f ms' % self.valset.get_val('flushtime'))
         self.labels['flushlabel'].set_pos(self.screens['main'].w - 160, 90)
+
+    def mouse_move(self, x, y, dx, dy):
+        super().mouse_move(x, y, dx, dy)
+        if self.screens['main'].mouse_c:
+            self.update_labels()
 
 
 window = JuliaWindow(width=500, height=700, caption='Julia Graph', bg=(0, 0, 0, 1), resizable=True)
