@@ -197,6 +197,8 @@ class Screen:
 class GraphScreen(Screen):
     def __init__(self, x, y, width, height, bg=(255, 255, 255), valset=None):
         super().__init__(x, y, width, height, bg=bg, valset=valset)
+        self._ow = width
+        self._oh = height
         self.sx = .5
         self.sy = .5
         self.sw = 1
@@ -213,8 +215,8 @@ class GraphScreen(Screen):
     def reset_graph(self):
         self.sx = .5
         self.sy = .5
-        self.sw = 1
-        self.sh = 1
+        self.sw = 1 * (self.w / self._ow)
+        self.sh = 1 * (self.h / self._oh)
 
     def up(self):
         self.sy += self.sh / 5
