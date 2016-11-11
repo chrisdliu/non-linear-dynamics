@@ -159,7 +159,7 @@ class IntField(NumField):
 
 class ComplexField(NumField):
     def value_str(self):
-        return str(self.value.value)
+        return '%.3f + %.3fj' % (self.value.value.real, self.value.value.imag)
 
     def parse(self):
         try:
@@ -177,7 +177,7 @@ class Label:
         self.x = x
         self.y = y
         self.text = text
-        self.label = pyglet.text.Label(text, font_name='Verdana', font_size=8, x=x, y=y, batch=batch,
+        self.label = pyglet.text.Label(text, font_name='Menlo', font_size=8, x=x, y=y, batch=batch,
             group=graphics.OrderedGroup(1), color=(color[0], color[1], color[2], 255))
 
     def set_text(self, text):

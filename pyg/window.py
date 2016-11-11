@@ -45,6 +45,15 @@ class Window(win.Window):
     def add_complex_field(self, name, x, y, w, h, field_name, value, limit='', inclusive='ul', low=0, high=1):
         self.fields[name] = ComplexField(x, y, w, h, field_name, value, self.batch, limit, inclusive, low, high)
 
+    def get_screen(self, name):
+        return self.screens[name]
+
+    def get_button(self, name):
+        return self.buttons[name]
+
+    def get_label(self, name):
+        return self.label[name]
+
     def on_draw(self):
         self.update_labels()
         self.clear()
@@ -54,7 +63,8 @@ class Window(win.Window):
 
     def render(self):
         for screen in self.screens.values():
-            screen.render()
+            if screen.visible:
+                screen.render()
         for button in self.buttons.values():
             button.render()
         for field in self.fields.values():
@@ -91,7 +101,8 @@ class Window(win.Window):
     # for subclasses
     def mouse_move(self, x, y, dx, dy):
         for screen in self.screens.values():
-            screen.mouse_move(x - screen.x, y - screen.y, dx, dy)
+            if screen.visible:
+                screen.mouse_move(x - screen.x, y - screen.y, dx, dy)
 
     def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         for screen in self.screens.values():

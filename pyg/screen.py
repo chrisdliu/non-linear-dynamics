@@ -1,8 +1,6 @@
 import pyglet.gl as gl
 import pyglet.window as win
 import pyglet.graphics as graphics
-import numpy as np
-import time
 
 
 class ScreenGroup(graphics.OrderedGroup):
@@ -36,11 +34,12 @@ class ScreenGroup(graphics.OrderedGroup):
 
 
 class Screen:
-    def __init__(self, x, y, width, height, bg=(255, 255, 255), valset=None):
+    def __init__(self, x, y, width, height, bg=(255, 255, 255), valset=None, visible=True):
         self.x = x
         self.y = y
         self.w = width
         self.h = height
+        self.visible = visible
 
         self.batch = graphics.Batch()
         self.group = ScreenGroup(x, y, width, height, 0)
@@ -59,6 +58,16 @@ class Screen:
 
         self.valset = valset
 
+    def set_visible(self, visible):
+        self.visible = visible
+        if visible:
+            self.render()
+        else:
+            for type in self.vertex_lists.keys():
+                if self.vertex_lists[type]:
+                    self.vertex_lists[type].delete()
+                self.vertex_lists[type] = None
+
     def get_val(self, name):
         return self.valset.get_val(name)
 
@@ -73,9 +82,10 @@ class Screen:
             self.vertex_lists['bg'] = None
         if self.vertex_lists['bg']:
             self.vertex_lists['bg'].delete()
-        self.vertex_lists['bg'] = self.batch.add(4, gl.GL_QUADS, self.bg_group,
-            ('v2f', (0, 0, 0, self.h, self.w, self.h, self.w, 0)),
-            ('c3B', color * 4))
+        if self.visible:
+            self.vertex_lists['bg'] = self.batch.add(4, gl.GL_QUADS, self.bg_group,
+                ('v2f', (0, 0, 0, self.h, self.w, self.h, self.w, 0)),
+                ('c3B', color * 4))
 
     def add_point(self, x, y, z=0, color=(0, 0, 0)):
         self.vertexes['points'].extend((x, y, z))
@@ -125,6 +135,8 @@ class Screen:
                 self.vertex_lists[type].delete()
                 self.vertex_lists[type] = None
             vlist = None
+            if not self.visible:
+                continue
             if type == 'points':
                 vlist = self.batch.add(len(self.vertexes[type]) // 3, gl.GL_POINTS, self.group, ('v3f', self.vertexes[type]), ('c3B', self.colors[type]))
             elif type == 'lines':
@@ -156,7 +168,7 @@ class Screen:
         self.bg_group.h = self.h
         self.set_bg(self.bg)
 
-    def set_coords(self, x, y):
+    def set_pos(self, x, y):
         self.x = x
         self.y = y
         self.group.x = x
@@ -167,7 +179,7 @@ class Screen:
     # to be overriden
     # render should add points, then flush to the batch
     def render(self):
-        self.flush()
+        pass
 
     def mouse_move(self, x, y, dx, dy):
         pass
@@ -195,8 +207,8 @@ class Screen:
 
 
 class GraphScreen(Screen):
-    def __init__(self, x, y, width, height, bg=(255, 255, 255), valset=None):
-        super().__init__(x, y, width, height, bg=bg, valset=valset)
+    def __init__(self, x, y, width, height, bg=(255, 255, 255), valset=None, visible=True):
+        super().__init__(x, y, width, height, bg=bg, valset=valset, visible=visible)
         self._ow = width
         self._oh = height
         self.sx = .5
@@ -284,8 +296,6 @@ class GraphScreen(Screen):
             self.offsy = 0
             self.bg_group.offsx = 0
             self.bg_group.offsy = 0
-            # self.group.offsx = 0
-            # self.group.offsy = 0
         self.render()
 
     def key_down(self, symbol, modifiers):
