@@ -16,33 +16,9 @@ def color(iter, max_iter):
     return int((iter / (max_iter + 1)) * 255)
 
 
-@jit('float64(int32, int32, float64, float64)')
-def norm_z2(iter, max_iter, zr2, zi2):
-    return iter + 1 - np.log2(np.log2(np.power(zr2 + zi2, .5))) #.30103
-    '''
-    c1 = palette[int(v) % 4]
-    c2 = palette[int(v + 1) % 4]
-    t = v % 1
-    c = (c1 + (c2 - c1) * t).astype(np.int32)
-    return (c[0] << 16) | (c[1] << 8) | c[2]
-    '''
-
-
-@jit('float64(complex128, complex128, float64, int32)')
-def what(z, c, limit, max_iter):
-    limit2 = limit * limit
-    zr = z.real
-    zi = z.imag
-    cr = c.real
-    ci = c.imag
-    for n in range(max_iter):
-        zr2 = zr * zr
-        zi2 = zi * zi
-        if zr2 + zi2 > limit2:
-            return norm_z2(n, max_iter, zr2, zi2) # -0.62,0.54
-        zi = 2 * zr * zi + ci
-        zr = zr2 - zi2 + cr
-    return 0
+@jit('float64(int32, float64, float64)')
+def norm_z2(iter, zr2, zi2):
+    return iter + 1 - np.log2(np.log2(np.power(zr2 + zi2, .5)))
 
 
 @jit('float64(complex128, complex128, float64, int32)')
@@ -56,29 +32,10 @@ def get_color_z2(z, c, limit, max_iter):
         zr2 = zr * zr
         zi2 = zi * zi
         if zr2 + zi2 > limit2:
-            return norm_z2(n, max_iter, zr2, zi2) # -0.62,0.54
+            return norm_z2(n, zr2, zi2) # -0.62,0.54
         zi = 2 * zr * zi + ci
         zr = zr2 - zi2 + cr
     return 0
-
-
-'''
-@jit('int64(complex128, complex128, float64, int64)')
-def get_color_z2(z, c, limit, max_iter):
-    limit2 = limit * limit
-    zr = z.real
-    zi = z.imag
-    cr = c.real
-    ci = c.imag
-    for n in range(max_iter):
-        zr2 = zr * zr
-        zi2 = zi * zi
-        if zr2 + zi2 > limit2:
-            return color(n, max_iter)
-        zi = 2 * zr * zi + ci
-        zr = zr2 - zi2 + cr
-    return 255
-'''
 
 
 @jit('int64(complex128, complex128, float64, int64)')
@@ -232,7 +189,6 @@ class JuliaScreen(pyg.screen.GraphScreen):
         if len(palette) != max_iter:
             palette = set_palette(max_iter)
         limit = self.get_val('limit')
-        print(palette.shape)
         colors = get_data(self.mode, self.w, self.h, bl_x, bl_y, tr_x, tr_y, limit, max_iter, c, palette)
         end = time.clock()
         self.valset.set_val('calctime', ((end - start) * 1000))
@@ -262,19 +218,6 @@ class JuliaScreen(pyg.screen.GraphScreen):
         if self.is_inside(x + self.x, y + self.y) and self.mouse_c:
             cx, cy = self.on_plot(x, y)
             self.set_val('c', cx + cy * 1j)
-            c = self.get_val('c')
-            norm = what(c, c, 2, 24)
-            intnorm = int(norm)
-            c1 = palette[intnorm % len(palette)]
-            c2 = palette[(intnorm + 1) % len(palette)]
-            t = norm % 1
-            ic = interpolate(c1, c2, t)
-            color = (ic[0] << 16) | (ic[1] << 8) | ic[2]
-            nc = [(color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff]
-            print(c)
-            print(ic)
-            print(nc)
-            #print(what(c, c, 2, 24))
 
 
 class JuliaWindow(pyg.window.Window):
