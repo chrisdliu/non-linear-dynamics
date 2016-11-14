@@ -123,7 +123,7 @@ class Screen:
     def add_quad(self, x1, y1, x2, y2, x3, y3, x4, y4, z=0, color=(0, 0, 0), uniform=True, colors=((0,) * 12)):
         self.vertexes['quads'].extend((x1, y1, z, x2, y2, z, x3, y3, z, x4, y4, z))
         if uniform:
-            self.colors['uuads'].extend(color * 4)
+            self.colors['quads'].extend(color * 4)
         else:
             self.colors['quads'].extend(colors)
 
@@ -151,8 +151,8 @@ class Screen:
 
     def clear_buffer(self):
         for type in self.vertex_types:
-            self.vertexes[type] = []
-            self.colors[type] = []
+            self.vertexes[type].clear()
+            self.colors[type].clear()
 
     def on_draw(self):
         self.batch.draw()
