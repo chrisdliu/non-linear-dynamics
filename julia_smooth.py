@@ -85,7 +85,6 @@ def set_palette(max_iter):
     return palette
 
 
-
 @guvectorize(['(complex128[:], float64[:], int32[:], int32[:,:], int32[:])'], '(n),(),(),(p,q)->(n)', target='parallel')
 def mandel_guvec(z, limit, max_iter, palette, output):
     limit = limit[0]
@@ -100,13 +99,19 @@ def mandel_guvec(z, limit, max_iter, palette, output):
         output[i] = ((c[0] & 0xff) << 16) | ((c[1] & 0xff) << 8) | (c[2] & 0xff)
 
 
-@guvectorize(['(complex128[:], complex128[:], float64[:], int32[:], int32[:])'], '(n),(),(),()->(n)', target='parallel')
-def julia_z2_guvec(z, c, limit, max_iter, output):
+@guvectorize(['(complex128[:], complex128[:], float64[:], int32[:], int32[:,:], int32[:])'], '(n),(),(),(),(p,q)->(n)', target='parallel')
+def julia_z2_guvec(z, c, limit, max_iter, palette, output):
     c = c[0]
     limit = limit[0]
     max_iter = max_iter[0]
     for i in range(z.shape[0]):
-        output[i] = get_color_z2(z[i], c, limit, max_iter)
+        norm = get_color_z2(z[i], c, limit, max_iter)
+        intnorm = int(norm)
+        c1 = palette[intnorm % len(palette)]
+        c2 = palette[(intnorm + 1) % len(palette)]
+        t = norm % 1
+        col = interpolate(c1, c2, t)
+        output[i] = ((col[0] & 0xff) << 16) | ((col[1] & 0xff) << 8) | (col[2] & 0xff)
 
 
 @guvectorize(['(complex128[:], complex128[:], float64[:], int32[:], int32[:])'], '(n),(),(),()->(n)', target='parallel')
@@ -133,7 +138,7 @@ def get_data_call(mode, w, h, bl_x, bl_y, tr_x, tr_y, limit, max_iter, c, palett
     zi = np.linspace(bl_y, tr_y, h, dtype=np.float64)
     z = zr + zi[:, None] * 1j  # [y, bottom to top][x, left to right]
     if mode == 0:
-        color_data = julia_z2_guvec(z, c, limit, max_iter)
+        color_data = julia_z2_guvec(z, c, limit, max_iter, palette)
     elif mode == 1:
         color_data = mandel_guvec(z, limit, max_iter, palette)
     elif mode == 2:
