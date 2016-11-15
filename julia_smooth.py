@@ -183,7 +183,7 @@ class JuliaScreen(pyg.screen.GraphScreen):
     def toggle_mouse_c(self):
         self.mouse_c = not self.mouse_c
 
-    def set_graph_points(self):
+    def render(self):
         #calc
         start = time.clock()
         bl_x, bl_y = self.on_plot(0, 0)
@@ -207,12 +207,9 @@ class JuliaScreen(pyg.screen.GraphScreen):
         end = time.clock()
         self.valset.set_val('flushtime', ((end - start) * 1000))
 
-    def render(self):
-        self.set_graph_points()
-
     def on_draw(self):
         super().on_draw()
-        self.img.blit(0, 200)
+        self.img.blit(self.x, self.y)
 
     def resize(self, width, height):
         self.refit(width, height - 200)
