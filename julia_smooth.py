@@ -89,7 +89,7 @@ def mandel_guvec(z, limit, max_iter, palette, output):
         intnorm = int(norm)
         c1 = palette[intnorm % len(palette)]
         c2 = palette[(intnorm + 1) % len(palette)]
-        t = float(norm % 1)
+        t = norm % 1
         r = int(c1[0] + (c2[0] - c1[0]) * t)
         g = int(c1[1] + (c2[1] - c1[1]) * t)
         b = int(c1[2] + (c2[2] - c1[2]) * t)
@@ -108,8 +108,10 @@ def julia_z2_guvec(z, c, limit, max_iter, palette, output):
         c1 = palette[intnorm % len(palette)]
         c2 = palette[(intnorm + 1) % len(palette)]
         t = norm % 1
-        #col = interpolate(c1, c2, t)
-        #output[i] = ((col[0] & 0xff) << 16) | ((col[1] & 0xff) << 8) | (col[2] & 0xff)
+        r = int(c1[0] + (c2[0] - c1[0]) * t)
+        g = int(c1[1] + (c2[1] - c1[1]) * t)
+        b = int(c1[2] + (c2[2] - c1[2]) * t)
+        output[i] = ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff)
 
 
 @guvectorize(['(complex128[:], complex128[:], float64[:], int32[:], int32[:])'], '(n),(),(),()->(n)', target='parallel')
