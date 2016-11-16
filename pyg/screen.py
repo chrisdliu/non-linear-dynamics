@@ -151,8 +151,8 @@ class Screen:
 
     def clear_buffer(self):
         for type in self.vertex_types:
-            self.vertexes[type].clear()
-            self.colors[type].clear()
+            self.vertexes[type] = []
+            self.colors[type] = []
 
     def on_draw(self):
         self.batch.draw()

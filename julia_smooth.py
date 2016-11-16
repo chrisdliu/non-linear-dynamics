@@ -1,7 +1,7 @@
 import pyg
 import pyglet
 import numpy as np
-from numba import jit, guvectorize
+from numba import jit, vectorize, guvectorize
 import time
 import ctypes
 
@@ -56,11 +56,6 @@ def get_color_sin(z, c, limit, max_iter):
     return 255
 
 
-@jit
-def interpolate(c1, c2, t):
-    return (c1 + (c2 - c1) * t).astype(np.int32)
-
-
 palette_colors = np.array([[0, 0, 0], [0, 10, 100], [255, 255, 255], [255, 161, 3]])
 palette = np.array([[0, 0, 0]])
 
@@ -85,7 +80,7 @@ def set_palette(max_iter):
     return palette
 
 
-@guvectorize(['(complex128[:], float64[:], int32[:], int32[:,:], int32[:])'], '(n),(),(),(p,q)->(n)', target='parallel')
+@guvectorize('(complex128[:], float64[:], int32[:], int32[:,:], int32[:])', '(n),(),(),(p,q)->(n)', target='parallel')
 def mandel_guvec(z, limit, max_iter, palette, output):
     limit = limit[0]
     max_iter = max_iter[0]
@@ -94,9 +89,12 @@ def mandel_guvec(z, limit, max_iter, palette, output):
         intnorm = int(norm)
         c1 = palette[intnorm % len(palette)]
         c2 = palette[(intnorm + 1) % len(palette)]
-        t = norm % 1
-        c = interpolate(c1, c2, t)
-        output[i] = ((c[0] & 0xff) << 16) | ((c[1] & 0xff) << 8) | (c[2] & 0xff)
+        t = float(norm % 1)
+        r = int(c1[0] + (c2[0] - c1[0]) * t)
+        g = int(c1[1] + (c2[1] - c1[1]) * t)
+        b = int(c1[2] + (c2[2] - c1[2]) * t)
+        output[i] = ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff)
+
 
 
 @guvectorize(['(complex128[:], complex128[:], float64[:], int32[:], int32[:,:], int32[:])'], '(n),(),(),(),(p,q)->(n)', target='parallel')
@@ -110,8 +108,8 @@ def julia_z2_guvec(z, c, limit, max_iter, palette, output):
         c1 = palette[intnorm % len(palette)]
         c2 = palette[(intnorm + 1) % len(palette)]
         t = norm % 1
-        col = interpolate(c1, c2, t)
-        output[i] = ((col[0] & 0xff) << 16) | ((col[1] & 0xff) << 8) | (col[2] & 0xff)
+        #col = interpolate(c1, c2, t)
+        #output[i] = ((col[0] & 0xff) << 16) | ((col[1] & 0xff) << 8) | (col[2] & 0xff)
 
 
 @guvectorize(['(complex128[:], complex128[:], float64[:], int32[:], int32[:])'], '(n),(),(),()->(n)', target='parallel')
@@ -226,7 +224,7 @@ class JuliaWindow(pyg.window.Window):
     def set_vars(self):
         self.valset.add_value('sz', .5)
         self.valset.add_value('max_iter', 24)
-        self.valset.add_value('limit', 2.0)
+        self.valset.add_value('limit', 20.0)
         self.valset.add_value('c', -.77 + .22j)
         self.valset.add_value('calctime', 0.0)
         self.valset.add_value('flushtime', 0.0)
