@@ -56,10 +56,10 @@ class GUI_Obj:
 class Field(GUI_Obj):
     accepted = []
 
-    def __init__(self, x, y, w, h, name, value, batch):
+    def __init__(self, x, y, w, h, name, valobj, batch):
         super().__init__(x, y, w, h, True)
         self.name = name
-        self.value = value
+        self.valobj = valobj
         self.input = ''
         self.batch = batch
         self.label = Label(x, y, self.get_label_text(), batch)
@@ -68,14 +68,17 @@ class Field(GUI_Obj):
         if self.is_focus:
             return '%s: %s' % (self.name, self.input)
         else:
-            return '%s: %s' % (self.name, self.value_str())
+            return '%s: %s' % (self.name, str(self.valobj))
 
     def enter(self):
         self.input = ''
         super().enter()
 
     def exit(self):
-        self.parse()
+        new_value = self.parse()
+        self.input = ''
+        if new_value:  # if new_value is not None
+            self.valobj.set_val(new_value)
         super().exit()
 
     def key_down(self, symbol, modifiers):
@@ -107,13 +110,10 @@ class Field(GUI_Obj):
 
     # to be overriden
     def parse(self):
-        self.input = ''
+        return ''
 
     def is_valid(self, pvalue):
         return True
-
-    def value_str(self):
-        return str(self.value)
 
 
 class NumField(Field):
@@ -134,80 +134,34 @@ class NumField(Field):
         'j',
     ]
 
-    def __init__(self, x, y, w, h, name, value, batch, limit='', inclusive='ul', low=0, high=1):
-        super().__init__(x, y, w, h, name, value, batch)
-        self.limit = limit
-        self.inclusive = inclusive
-        self.low = low
-        self.high = high
-
-    def is_valid(self, pvalue):
-        if 'l' in self.limit:
-            if 'l' in self.inclusive:
-                if self.low > pvalue:
-                    return False
-            else:
-                if self.low >= pvalue:
-                    return False
-        if 'u' in self.limit:
-            if 'u' in self.inclusive:
-                if pvalue > self.high:
-                    return False
-            else:
-                if pvalue >= self.high:
-                    return False
-        return True
-
 
 class FloatField(NumField):
-    def value_str(self):
-        return '%.5f' % self.value.value
-
     def parse(self):
         try:
-            pvalue = float(self.input)
+            return float(self.input)
         except ValueError:
-            self.input = ''
-            return
-        self.input = ''
-        if self.is_valid(pvalue):
-            self.value.value = pvalue
+            return None
 
 
 class IntField(NumField):
-    def value_str(self):
-        return '%i' % self.value.value
-
     def parse(self):
         try:
-            pvalue = int(self.input)
+            return int(self.input)
         except ValueError:
-            self.input = ''
-            return
-        self.input = ''
-        if self.is_valid(pvalue):
-            self.value.value = pvalue
+            return None
 
 
 class ComplexField(NumField):
-    def value_str(self):
-        return '%.3f + %.3fj' % (self.value.value.real, self.value.value.imag)
-
     def parse(self):
         try:
-            pvalue = complex(self.input)
+            return complex(self.input)
         except ValueError:
-            self.input = ''
-            return
-        self.input = ''
-        if self.is_valid(pvalue):
-            self.value.value = pvalue
+            return None
 
 
 class Label(GUI_Obj):
     def __init__(self, x, y, text, batch, color=(255, 255, 255)):
-        self.x = x
-        self.y = y
+        super().__init__(x, y, 0, 0, False)
         self.text = text
         self.label = pyglet.text.Label(text, font_name='Menlo', font_size=8, x=x, y=y, batch=batch,
             group=graphics.OrderedGroup(1), color=(color[0], color[1], color[2], 255))

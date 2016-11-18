@@ -40,14 +40,14 @@ class Window(win.Window):
         else:
             self.labels[name] = Label(x, y, text, self.batch)
 
-    def add_float_field(self, name, x, y, w, h, field_name, value, limit='', inclusive='ul', low=0, high=1):
-        self.fields[name] = FloatField(x, y, w, h, field_name, value, self.batch, limit, inclusive, low, high)
+    def add_float_field(self, name, x, y, w, h, field_name, valobj):
+        self.fields[name] = FloatField(x, y, w, h, field_name, valobj, self.batch)
 
-    def add_int_field(self, name, x, y, w, h, field_name, value, limit='', inclusive='ul', low=0, high=1):
-        self.fields[name] = IntField(x, y, w, h, field_name, value, self.batch, limit, inclusive, low, high)
+    def add_int_field(self, name, x, y, w, h, field_name, valobj):
+        self.fields[name] = IntField(x, y, w, h, field_name, valobj, self.batch)
 
-    def add_complex_field(self, name, x, y, w, h, field_name, value, limit='', inclusive='ul', low=0, high=1):
-        self.fields[name] = ComplexField(x, y, w, h, field_name, value, self.batch, limit, inclusive, low, high)
+    def add_complex_field(self, name, x, y, w, h, field_name, valobj):
+        self.fields[name] = ComplexField(x, y, w, h, field_name, valobj, self.batch)
 
     def add_int_slider(self, name, x, y, w, h, offs, field_name, valobj, low, high):
         self.sliders[name] = IntSlider(x, y, w, h, offs, field_name, valobj, low, high, self.batch)
