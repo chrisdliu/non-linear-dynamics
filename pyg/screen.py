@@ -34,12 +34,13 @@ class ScreenGroup(graphics.OrderedGroup):
 
 
 class Screen:
-    def __init__(self, x, y, width, height, bg=(255, 255, 255), valset=None, visible=True):
+    def __init__(self, x, y, width, height, bg=(255, 255, 255), valset=None, visible=True, active=True):
         self.x = x
         self.y = y
         self.w = width
         self.h = height
         self.visible = visible
+        self.active = active
 
         self.batch = graphics.Batch()
         self.group = ScreenGroup(x, y, width, height, 0)
@@ -207,28 +208,43 @@ class Screen:
 
 
 class GraphScreen(Screen):
-    def __init__(self, x, y, width, height, bg=(255, 255, 255), valset=None, visible=True):
+    def __init__(self, x, y, width, height, sx, sy, sw, sh, bg=(255, 255, 255), valset=None, visible=True):
         super().__init__(x, y, width, height, bg=bg, valset=valset, visible=visible)
         self._ow = width
         self._oh = height
-        self.sx = .5
-        self.sy = .5
-        self.sw = 1
-        self.sh = 1
+        self.sx = sx
+        self.sy = sy
+        self.sw = sw
+        self.sh = sh
+        self._osx = sx
+        self._osy = sy
+        self._osw = sw
+        self._osh = sh
         self.drag = False
         self.offsx = 0
         self.offsy = 0
-        self.reset_graph()
 
     def reset(self):
         self.reset_graph()
         self.render()
 
     def reset_graph(self):
+        '''
         self.sx = .5
         self.sy = .5
         self.sw = 1 * (self.w / self._ow)
         self.sh = 1 * (self.h / self._oh)
+        '''
+        self.sx = self._osx
+        self.sy = self._osy
+        self.sw = self._osw * (self.w / self._ow)
+        self.sh = self._osh * (self.h / self._oh)
+
+    def reset_to(self, sx, sy, sw, sh):
+        self._osx = sx
+        self._osy = sy
+        self._osw = sw
+        self._osh = sh
 
     def up(self):
         self.sy += self.sh / 5
@@ -259,13 +275,10 @@ class GraphScreen(Screen):
 
     def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         if self.drag:
-            # print(x, y)
             self.offsx = x - self.mdownx
             self.offsy = y - self.mdowny
             self.bg_group.offsx = -self.offsx
             self.bg_group.offsy = -self.offsy
-            # self.group.offsx = offsx
-            # self.group.offsy = offsy
 
     def mouse_down(self, x, y, button, modifier):
         if button == win.mouse.MIDDLE:

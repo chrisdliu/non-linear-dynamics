@@ -56,7 +56,7 @@ def get_color_sin(z, c, limit, max_iter):
     return 255
 
 
-palette_colors = np.array([[0, 0, 0], [0, 10, 100], [255, 255, 255], [255, 161, 3]])
+palette_colors = np.array([[0, 0, 0], [100, 0, 100], [255, 255, 255], [255, 161, 3]]) #[255, 161, 3]])
 palette = np.array([[0, 0, 0]])
 
 
@@ -94,7 +94,6 @@ def mandel_guvec(z, limit, max_iter, palette, output):
         g = int(c1[1] + (c2[1] - c1[1]) * t)
         b = int(c1[2] + (c2[2] - c1[2]) * t)
         output[i] = ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff)
-
 
 
 @guvectorize(['(complex128[:], complex128[:], float64[:], int32[:], int32[:,:], int32[:])'], '(n),(),(),(),(p,q)->(n)', target='parallel')
@@ -167,7 +166,7 @@ class JuliaScreen(pyg.screen.GraphScreen):
     def __init__(self, x, y, width, height, bg=(255, 255, 255), valset=None, visible=True):
         self.mode = 1
         self.mouse_c = False
-        super().__init__(x, y, width, height, bg=bg, valset=valset, visible=visible)
+        super().__init__(x, y, width, height, 0, 0, 5, 5, bg=bg, valset=valset, visible=visible)
         rawdata = np.zeros(self.w * self.h * 3, dtype=np.ubyte)
         self.img = pyglet.image.ImageData(self.w, self.h, 'RGB', rawdata)
 
@@ -227,7 +226,7 @@ class JuliaWindow(pyg.window.Window):
         self.valset.add_value('sz', .5)
         self.valset.add_value('max_iter', 24)
         self.valset.add_value('limit', 20.0)
-        self.valset.add_value('c', -.77 + .22j)
+        self.valset.add_value('c', -.25 -.67j)
         self.valset.add_value('calctime', 0.0)
         self.valset.add_value('flushtime', 0.0)
 

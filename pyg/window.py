@@ -16,6 +16,7 @@ class Window(win.Window):
         self.buttons = {}
         self.labels = {}
         self.fields = {}
+        self.sliders = {}
         self.valset = ValSet()
 
         self.focus = None
@@ -29,6 +30,9 @@ class Window(win.Window):
 
     def add_button(self, name, x, y, w, h, text, action=None):
         self.buttons[name] = Button(x, y, w, h, text, self.batch, action=action)
+
+    def add_toggle_button(self, name, x, y, w, h, text, boolval):
+        self.buttons[name] = ToggleButton(x, y, w, h, text, boolval, self.batch)
 
     def add_label(self, name, x, y, text, color=None):
         if color:
@@ -45,6 +49,9 @@ class Window(win.Window):
     def add_complex_field(self, name, x, y, w, h, field_name, value, limit='', inclusive='ul', low=0, high=1):
         self.fields[name] = ComplexField(x, y, w, h, field_name, value, self.batch, limit, inclusive, low, high)
 
+    def add_int_slider(self, name, x, y, w, h, offs, field_name, valobj, low, high):
+        self.sliders[name] = IntSlider(x, y, w, h, offs, field_name, valobj, low, high, self.batch)
+
     def get_screen(self, name):
         return self.screens[name]
 
@@ -53,6 +60,18 @@ class Window(win.Window):
 
     def get_label(self, name):
         return self.label[name]
+
+    def get_field(self, name):
+        return self.fields[name]
+
+    def get_slider(self, name):
+        return self.sliders[name]
+
+    def get_val(self, name):
+        return self.valset.get_val(name)
+
+    def get_valobj(self, name):
+        return self.valset.get_valobj(name)
 
     def on_draw(self):
         self.update_labels()
@@ -69,6 +88,8 @@ class Window(win.Window):
             button.render()
         for field in self.fields.values():
             field.render()
+        for slider in self.sliders.values():
+            slider.render()
 
     def on_resize(self, width, height):
         super().on_resize(width, height)
@@ -101,17 +122,31 @@ class Window(win.Window):
     # for subclasses
     def mouse_move(self, x, y, dx, dy):
         for screen in self.screens.values():
-            if screen.visible:
+            if screen.active:
                 screen.mouse_move(x - screen.x, y - screen.y, dx, dy)
 
     def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         for screen in self.screens.values():
             screen.mouse_drag(x - screen.x, y - screen.y, dx, dy, buttons, modifiers)
+        if self.focus:
+            self.focus.mouse_drag(x - self.focus.x, y - self.focus.y, dx, dy, buttons, modifiers)
+            if isinstance(self.focus, Slider):
+                if self.focus.is_updated():
+                    self.render()
 
     def mouse_down(self, x, y, buttons, modifiers):
         for screen in self.screens.values():
             if screen.is_inside(x, y):
                 screen.mouse_down(x - screen.x, y - screen.y, buttons, modifiers)
+                break
+        if self.focus and self.focus.is_inside(x, y):
+            self.focus.mouse_down(x, y, buttons, modifiers)
+        else:
+            for slider in self.sliders.values():
+                if slider.is_inside(x, y):
+                    self.focus = slider
+                    self.focus.enter()
+                    break
 
     def mouse_up(self, x, y, buttons, modifiers):
         for screen in self.screens.values():
@@ -122,23 +157,19 @@ class Window(win.Window):
             if b.is_inside(x, y):
                 b.mouse_up()
                 break
-        in_field = False
-        for f in self.fields.values():
-            if f.is_inside(x, y):
-                if self.focus:
-                    if f != self.focus:
-                        self.focus.exit()
-                    else:
-                        in_field = True
-                        break
-                self.focus = f
-                self.focus.enter()
-                in_field = True
-                break
-        if not in_field:
-            if self.focus:
+        if self.focus:
+            if not self.focus.is_inside(x, y) or isinstance(self.focus, Slider):
                 self.focus.exit()
-            self.focus = None
+                self.focus.render()
+                self.focus = None
+            else:
+                self.focus.mouse_up(x - self.focus.x, y - self.focus.y, buttons, modifiers)
+        else:
+            for field in self.fields.values():
+                if field.is_inside(x, y):
+                    self.focus = field
+                    self.focus.enter()
+                    break
 
         print('click: ' + str(x) + ', ' + str(y))
 

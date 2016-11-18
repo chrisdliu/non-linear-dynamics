@@ -164,13 +164,7 @@ class JuliaScreen(pyg.screen.GraphScreen):
     def __init__(self, x, y, width, height, bg=(255, 255, 255), valset=None, visible=True):
         self.mode = 0
         self.mouse_c = False
-        super().__init__(x, y, width, height, bg=bg, valset=valset, visible=visible)
-
-    def reset_graph(self):
-        self.sx = 0
-        self.sy = 0
-        self.sw = 5 * (self.w / 500)
-        self.sh = 5 * (self.h / 500)
+        super().__init__(x, y, width, height, 0, 0, 5, 5, bg=bg, valset=valset, visible=visible)
 
     def set_mode(self, mode):
         self.mode = mode
@@ -192,13 +186,13 @@ class JuliaScreen(pyg.screen.GraphScreen):
         self.set_lines_both(lines, colors)
 
     def render(self):
-        start = time.clock()
+        start = time.time()
         self.set_graph_points()
-        end = time.clock()
+        end = time.time()
         self.valset.set_val('calctime', ((end - start) * 1000))
-        start = time.clock()
+        start = time.time()
         self.flush()
-        end = time.clock()
+        end = time.time()
         self.valset.set_val('flushtime', ((end - start) * 1000))
 
     def key_down(self, symbol, modifiers):
@@ -215,21 +209,21 @@ class JuliaScreen(pyg.screen.GraphScreen):
 
 class JuliaWindow(pyg.window.Window):
     def set_vars(self):
-        self.valset.add_value('sz', .5)
-        self.valset.add_value('max_iter', 25)
-        self.valset.add_value('limit', 2.0)
-        self.valset.add_value('c', -.77 + .22j)
-        self.valset.add_value('cmpr', 0.0)
-        self.valset.add_value('calctime', 0.0)
-        self.valset.add_value('flushtime', 0.0)
+        self.valset.add_num_value('sz', .5)
+        self.valset.add_num_value('max_iter', 25)
+        self.valset.add_num_value('limit', 2.0)
+        self.valset.add_num_value('c', -.77 + .22j)
+        self.valset.add_num_value('cmpr', 0.0)
+        self.valset.add_num_value('calctime', 0.0)
+        self.valset.add_num_value('flushtime', 0.0)
 
         main = JuliaScreen(0, 200, 500, 500, valset=self.valset)
         self.add_screen('main', main)
 
-        self.add_float_field('zoomfield', 230, 55, 100, 15, 'Zoom', self.valset.get_obj('sz'), limit='ul', inclusive='', low=0, high=1)
-        self.add_int_field('max_iter', 230, 155, 100, 15, 'Max Iter', self.valset.get_obj('max_iter'), limit='l', low=1)
-        self.add_float_field('limit', 230, 135, 100, 15, 'Limit', self.valset.get_obj('limit'), limit='l', inclusive='', low=0)
-        self.add_complex_field('c', 230, 75, 100, 15, 'C', self.valset.get_obj('c'))
+        self.add_float_field('zoomfield', 230, 55, 100, 15, 'Zoom', self.get_valobj('sz'), limit='ul', inclusive='', low=0, high=1)
+        self.add_int_field('max_iter', 230, 155, 100, 15, 'Max Iter', self.get_valobj('max_iter'), limit='l', low=1)
+        self.add_float_field('limit', 230, 135, 100, 15, 'Limit', self.get_valobj('limit'), limit='l', inclusive='', low=0)
+        self.add_complex_field('c', 230, 75, 100, 15, 'C', self.get_valobj('c'))
 
         self.add_button('resetb', 150, 120, 40, 40, 'Reset', self.reset)
         self.add_button('mouse_c', 150, 60, 40, 40, 'Mouse C', self.toggle_mouse_c)

@@ -11,13 +11,15 @@ class TestScreen(pyg.screen.Screen):
 
     def resize(self, width, height):
         self.w = width
-        self.h = height
+        self.h = height - 200
 
 
 class TestWindow(pyg.window.Window):
     def set_vars(self):
-        self.add_screen('main', (TestScreen(0, 0, 600, 600, bg=(255, 255, 255), valset=None)))
+        self.valset.add_value('val', 1)
+        self.add_screen('main', (TestScreen(0, 200, 600, 600, bg=(255, 255, 255), valset=self.valset)))
+        self.add_int_slider('valslider', 100, 100, 100, 20, 20, 'Val', self.valset.get_obj('val'), -5, 2)
 
 
-window = TestWindow(width=600, height=600, caption='Logistics Graph', bg=(0, 0, 0, 1), resizable=True)
+window = TestWindow(width=600, height=800, caption='Logistics Graph', bg=(0, 0, 0, 1), resizable=True)
 pyglet.app.run()
