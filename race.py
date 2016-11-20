@@ -530,7 +530,7 @@ class Race(Window):
                         for color in rgb:
                             colors.append(color)
 
-            self.vertex_lists.append(self.batch.add(len(quads)*2//6, GL_QUADS, None, ('v3f', quads), ('c3B', colors)))
+            self.vertex_lists.append(self._batch.add(len(quads) * 2 // 6, GL_QUADS, None, ('v3f', quads), ('c3B', colors)))
         elif self.mode == 1:
             quads = []
             colors = []
@@ -558,7 +558,7 @@ class Race(Window):
                         for color in rgb:
                             colors.append(color)
 
-            self.vertex_lists.append(self.batch.add(len(quads)//2, GL_QUADS, None, ('v2f', quads), ('c3B', colors)))
+            self.vertex_lists.append(self._batch.add(len(quads) // 2, GL_QUADS, None, ('v2f', quads), ('c3B', colors)))
 
     def on_draw(self):
         super().on_draw()
@@ -577,7 +577,7 @@ class Race(Window):
                 py = (point[1] + self.offsy) * 10 + 205
                 points.extend((px, py, -1))
                 colors.extend((240, 240, 0))
-            self.overlays.append(self.batch.add(len(self.solution), GL_LINE_STRIP, None, ('v3f', points), ('c3B', colors)))
+            self.overlays.append(self._batch.add(len(self.solution), GL_LINE_STRIP, None, ('v3f', points), ('c3B', colors)))
         '''
         if self.heuristiclabel:
             self.heuristiclabel.delete()

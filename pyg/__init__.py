@@ -1,6 +1,8 @@
 """
 By Chris Liu
 
+A module for using pyglet
+
 ORDERED GROUPS:
 window:
  0: buttons
@@ -11,8 +13,8 @@ screen:
 
 TODO:
 status line at bottom?
-add other primitives
 """
+
 
 from .gui import *
 from .screen import *

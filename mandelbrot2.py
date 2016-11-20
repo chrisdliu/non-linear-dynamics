@@ -10,8 +10,8 @@ class Mandelbrot(Window):
 
     def load(self):
         fstart = time.time()
-        self.batch.add(2, GL_LINES, None, ('v3f', (300 - self.offsx / self.stepx, 200, -1, 300 - self.offsx / self.stepx, 800, -1)), ('c3B', (255, 255, 255, 255, 255, 255)))
-        self.batch.add(2, GL_LINES, None, ('v3f', (0, 500 + self.offsy / self.stepy, -1, 600, 500 + self.offsy / self.stepy, -1)), ('c3B', (255, 255, 255, 255, 255, 255)))
+        self._batch.add(2, GL_LINES, None, ('v3f', (300 - self.offsx / self.stepx, 200, -1, 300 - self.offsx / self.stepx, 800, -1)), ('c3B', (255, 255, 255, 255, 255, 255)))
+        self._batch.add(2, GL_LINES, None, ('v3f', (0, 500 + self.offsy / self.stepy, -1, 600, 500 + self.offsy / self.stepy, -1)), ('c3B', (255, 255, 255, 255, 255, 255)))
 
         pallet = []
         max_i = 20

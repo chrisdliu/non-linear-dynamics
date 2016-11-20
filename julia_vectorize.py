@@ -1,8 +1,12 @@
+"""
+By Chris Liu
+"""
+
+
 import pyg
 import pyglet
 import numpy as np
 from numba import jit, vectorize, guvectorize
-import math
 import time
 import ctypes
 
@@ -10,9 +14,8 @@ import ctypes
 @jit('float64(int32, float64)')
 def norm_z3(iter, mag):
     ln3 = np.log(3)
-    return iter + 1 - np.log(np.log(mag) / ln3) / (ln3 * ln3)
-    #return (iter + 1 - math.log(math.log(mag, 3), 3))
-    #return iter + 1 - np.log2(np.log2(mag))
+    #return iter + 1 - (np.log(np.log(np.log(mag) / ln3) / ln3) / ln3)
+    return iter + 1 - np.log2(np.log2(mag / (np.log2(3))))
 
 
 @jit('int64(complex128, complex128, float64, int64)')
@@ -34,8 +37,9 @@ def mandel_vec(z, limit, max_iter):
     for n in range(max_iter):
         zr2 = zr * zr
         zi2 = zi * zi
-        if zr2 + zi2 > limit2:
-            return n + 1 - np.log2(np.log2(np.power(zr2 + zi2, .5)))
+        zmag2 = zr2 + zi2
+        if zmag2 > limit2:
+            return n + 1 - np.log2(np.log2(np.power(zmag2, .5)))
         zi = 2 * zr * zi + ci
         zr = zr2 - zi2 + cr
     return 0
@@ -51,8 +55,9 @@ def julia_z2_vec(z, c, limit, max_iter):
     for n in range(max_iter):
         zr2 = zr * zr
         zi2 = zi * zi
-        if zr2 + zi2 > limit2:
-            return n + 1 - np.log2(np.log2(np.power(zr2 + zi2, .5)))
+        zmag2 = zr2 + zi2
+        if zmag2 > limit2:
+            return n + 1 - np.log2(np.log2(np.power(zmag2, .5)))
         zi = 2 * zr * zi + ci
         zr = zr2 - zi2 + cr
     return 0
@@ -67,21 +72,22 @@ def julia_z3_vec(z, c, limit, max_iter):
 def get_data_call(mode, w, h, bl_x, bl_y, tr_x, tr_y, limit, max_iter, c, palette):
     zr = np.linspace(bl_x, tr_x, w, dtype=np.float64, endpoint=False)
     zi = np.linspace(bl_y, tr_y, h, dtype=np.float64, endpoint=False)
-    z = zr[:,None] + zi * 1j  # [y, bottom to top][x, left to right]
+    z = zr[:,None] + zi * 1j  # [x][y]
     if mode == 0:
         color_data = julia_z2_vec(z, c, limit, max_iter)
     elif mode == 1:
-        color_data = mandel_vec(z, limit, max_iter) #ndarray, shape=w,h
+        color_data = mandel_vec(z, limit, max_iter)
     elif mode == 2:
         color_data = julia_z3_vec(z, c, limit, max_iter)
 
-    return parse_color_data(color_data, palette)
+    return parse_color_data(color_data, max_iter, palette)
 
 
-@guvectorize('(float64[:], int32[:,:], int32[:])', '(n),(p,q)->(n)', target='parallel')
-def parse_color_data(color_data, palette, output):
+@guvectorize('(float64[:], int32[:], int32[:,:], int32[:])', '(n),(),(p,q)->(n)', target='parallel')
+def parse_color_data(color_data, max_iter, palette, output):
+    div = max_iter[0] // 4
     for i in range(color_data.shape[0]):
-        norm = color_data[i]
+        norm = color_data[i] / div
         intnorm = int(norm)
         c1 = palette[intnorm % len(palette)]
         c2 = palette[(intnorm + 1) % len(palette)]
@@ -92,7 +98,7 @@ def parse_color_data(color_data, palette, output):
         output[i] = ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff)
 
 
-@jit
+@jit('int32(int32, int32, int32)')
 def get_pos(x, y, w):
     return (y * w + x) * 3
 
@@ -112,34 +118,14 @@ def get_data(mode, w, h, bl_x, bl_y, tr_x, tr_y, limit, max_iter, c, palette):
     return colors
 
 
-palette_colors = np.array([[0, 0, 0], [100, 0, 100], [255, 255, 255], [255, 161, 3]]) #[255, 161, 3]])
-palette = np.array([[0, 0, 0]])
-
-
-@jit
-def set_palette(max_iter):
-    pal_col_len = len(palette_colors)
-    max_iter -= max_iter % pal_col_len + pal_col_len
-    step = max_iter // 4
-    palette = np.empty((max_iter, 3), dtype=np.int32)
-    for i in range(pal_col_len):
-        c1 = palette_colors[i]
-        if i == pal_col_len - 1:
-            c2 = palette_colors[0]
-        else:
-            c2 = palette_colors[i + 1]
-        r = np.linspace(c1[0], c2[0], step, False)
-        g = np.linspace(c1[1], c2[1], step, False)
-        b = np.linspace(c1[2], c2[2], step, False)
-        p = np.stack((r, g, b), axis=-1)
-        palette[i*step:(i+1)*step] = p
-    return palette
+palette_colors = np.array([[0, 0, 0], [100, 0, 100], [255, 255, 255], [255, 161, 3]], dtype=np.int32) #[255, 161, 3]])
 
 
 class JuliaScreen(pyg.screen.GraphScreen):
-    def __init__(self, x, y, width, height, bg=(255, 255, 255), valset=None, visible=True):
+    def __init__(self, x, y, width, height, valset, zoom_valobj, bg=(255, 255, 255), visible=True):
         self.mode = 1
-        super().__init__(x, y, width, height, 0, 0, 5, 5, bg=bg, valset=valset, visible=visible)
+        super().__init__(x, y, width, height, 0, 0, 5, 5, valset, zoom_valobj, bg=bg, visible=visible)
+        # -.743643887037151, 0.131825904205330, .000000000051299, .000000000051299
         rawdata = np.zeros(self.w * self.h * 3, dtype=np.ubyte)
         self.img = pyglet.image.ImageData(self.w, self.h, 'RGB', rawdata)
 
@@ -153,15 +139,13 @@ class JuliaScreen(pyg.screen.GraphScreen):
         tr_x, tr_y = self.on_plot(self.w, self.h)
         c = self.get_val('c')
         max_iter = self.get_val('max_iter')
-        global palette, palette_colors
+        global palette_colors
         palette_colors[0] = [self.get_val('palette0r'), self.get_val('palette0g'), self.get_val('palette0b')]
         palette_colors[1] = [self.get_val('palette1r'), self.get_val('palette1g'), self.get_val('palette1b')]
         palette_colors[2] = [self.get_val('palette2r'), self.get_val('palette2g'), self.get_val('palette2b')]
         palette_colors[3] = [self.get_val('palette3r'), self.get_val('palette3g'), self.get_val('palette3b')]
-        if len(palette) != max_iter:
-            palette = set_palette(max_iter)
         limit = self.get_val('limit')
-        colors = get_data(self.mode, self.w, self.h, bl_x, bl_y, tr_x, tr_y, limit, max_iter, c, palette)
+        colors = get_data(self.mode, self.w, self.h, bl_x, bl_y, tr_x, tr_y, limit, max_iter, c, palette_colors)
         end = time.time()
         self.valset.set_val('calctime', ((end - start) * 1000))
 
@@ -174,8 +158,8 @@ class JuliaScreen(pyg.screen.GraphScreen):
         end = time.time()
         self.valset.set_val('flushtime', ((end - start) * 1000))
 
-    def on_draw(self):
-        super().on_draw()
+    def draw(self):
+        super().draw()
         self.img.blit(self.x, self.y)
 
     def resize(self, width, height):
@@ -212,7 +196,7 @@ class JuliaWindow(pyg.window.Window):
         self.valset.add_int_value('palette3b', 3)
         self.valset.add_bool_value('mouse_c', False)
 
-        main = JuliaScreen(0, 300, 500, 500, valset=self.valset)
+        main = JuliaScreen(0, 300, 500, 500, self.valset, self.valset.get_valobj('sz'))
         self.add_screen('main', main)
 
         self.add_float_field('zoomfield', 120, 30, 120, 15, 'Zoom', self.get_valobj('sz'))
@@ -227,10 +211,10 @@ class JuliaWindow(pyg.window.Window):
         self.add_button('m3b', 20, 90, 80, 20, 'Julia z^3+c', lambda: self.set_mode(2))
         self.add_toggle_button('mouse_c', 65, 30, 40, 15, 'Mouse C', self.get_valobj('mouse_c'))
 
-        self.add_label('leftlabel', 10, 280, '%.5f' % (self.screens['main'].sx - self.screens['main'].sw / 2), color=(255, 0, 255))
-        self.add_label('rightlabel', self.width- 60, 280, '%.5f' % (self.screens['main'].sx + self.screens['main'].sw / 2), color=(255, 0, 255))
-        self.add_label('toplabel', 10, self.height + 180, '%.5f' % (self.screens['main'].sy + self.screens['main'].sh / 2), color=(255, 0, 255))
-        self.add_label('bottomlabel', 10, 310, '%.5f' % (self.screens['main'].sy - self.screens['main'].sh / 2), color=(255, 0, 255))
+        self.add_label('leftlabel', 10, 280, '%.5f' % (self.get_screen('main').min_gx), color=(255, 0, 255))
+        self.add_label('rightlabel', self.width- 60, 280, '%.5f' % (self.get_screen('main').max_gx), color=(255, 0, 255))
+        self.add_label('toplabel', 10, self.height + 180, '%.5f' % (self.get_screen('main').max_gy), color=(255, 0, 255))
+        self.add_label('bottomlabel', 10, 310, '%.5f' % (self.get_screen('main').min_gy), color=(255, 0, 255))
 
         self.add_label('calclabel', self.width - 160, 160, '  calc time: %.5f' % self.valset.get_val('calctime'))
         self.add_label('flushlabel', self.width - 160, 145, ' flush time: %.5f' % self.valset.get_val('flushtime'))
@@ -257,15 +241,15 @@ class JuliaWindow(pyg.window.Window):
         if mode == self.screens['main'].mode:
             return
         self.screens['main'].set_mode(mode)
-        self.render()
+        self.on_resize(self.width, self.height)
 
     def update_labels(self):
-        self.labels['leftlabel'].set_text('%.5f' % (self.screens['main'].sx - self.screens['main'].sw / 2))
-        self.labels['rightlabel'].set_text('%.5f' % (self.screens['main'].sx + self.screens['main'].sw / 2))
+        self.labels['leftlabel'].set_text('%.5f' % (self.get_screen('main').min_gx))
+        self.labels['rightlabel'].set_text('%.5f' % (self.get_screen('main').max_gx))
         self.labels['rightlabel'].set_pos(self.width - 60, 280)
-        self.labels['toplabel'].set_text('%.5f' % (self.screens['main'].sy + self.screens['main'].sh / 2))
+        self.labels['toplabel'].set_text('%.5f' % (self.get_screen('main').max_gy))
         self.labels['toplabel'].set_pos(10, self.height - 20)
-        self.labels['bottomlabel'].set_text('%.5f' % (self.screens['main'].sy - self.screens['main'].sh / 2))
+        self.labels['bottomlabel'].set_text('%.5f' % (self.get_screen('main').min_gy))
 
         self.labels['calclabel'].set_text('  calc time: %.5f ms' % self.valset.get_val('calctime'))
         self.labels['calclabel'].set_pos(self.width - 160, 160)

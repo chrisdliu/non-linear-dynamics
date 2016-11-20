@@ -9,9 +9,7 @@ class Window(win.Window):
         self.set_minimum_size(width, height)
         gl.glClearColor(bg[0], bg[1], bg[2], bg[3])
 
-        # batch for the window
-        # no vertex_list for window
-        self.batch = graphics.Batch()
+        self._batch = graphics.Batch()
         self.screens = {}
         self.buttons = {}
         self.labels = {}
@@ -29,28 +27,25 @@ class Window(win.Window):
         self.screens[name] = screen
 
     def add_button(self, name, x, y, w, h, text, action=None):
-        self.buttons[name] = Button(x, y, w, h, text, self.batch, action=action)
+        self.buttons[name] = Button(x, y, w, h, text, self._batch, action=action)
 
     def add_toggle_button(self, name, x, y, w, h, text, boolval):
-        self.buttons[name] = ToggleButton(x, y, w, h, text, boolval, self.batch)
+        self.buttons[name] = ToggleButton(x, y, w, h, text, boolval, self._batch)
 
-    def add_label(self, name, x, y, text, color=None):
-        if color:
-            self.labels[name] = Label(x, y, text, self.batch, color=color)
-        else:
-            self.labels[name] = Label(x, y, text, self.batch)
+    def add_label(self, name, x, y, text, color=(255, 255, 255)):
+        self.labels[name] = Label(x, y, text, self._batch, color=color)
 
     def add_float_field(self, name, x, y, w, h, field_name, valobj):
-        self.fields[name] = FloatField(x, y, w, h, field_name, valobj, self.batch)
+        self.fields[name] = FloatField(x, y, w, h, field_name, valobj, self._batch)
 
     def add_int_field(self, name, x, y, w, h, field_name, valobj):
-        self.fields[name] = IntField(x, y, w, h, field_name, valobj, self.batch)
+        self.fields[name] = IntField(x, y, w, h, field_name, valobj, self._batch)
 
     def add_complex_field(self, name, x, y, w, h, field_name, valobj):
-        self.fields[name] = ComplexField(x, y, w, h, field_name, valobj, self.batch)
+        self.fields[name] = ComplexField(x, y, w, h, field_name, valobj, self._batch)
 
     def add_int_slider(self, name, x, y, w, h, offs, field_name, valobj, low, high):
-        self.sliders[name] = IntSlider(x, y, w, h, offs, field_name, valobj, low, high, self.batch)
+        self.sliders[name] = IntSlider(x, y, w, h, offs, field_name, valobj, low, high, self._batch)
 
     def get_screen(self, name):
         return self.screens[name]
@@ -70,15 +65,18 @@ class Window(win.Window):
     def get_val(self, name):
         return self.valset.get_val(name)
 
+    def set_val(self, name, new_value):
+        self.valset.set_val(name, new_value)
+
     def get_valobj(self, name):
         return self.valset.get_valobj(name)
 
-    def on_draw(self):
+    def draw(self):
         self.update_labels()
         self.clear()
         for screen in self.screens.values():
-            screen.on_draw()
-        self.batch.draw()
+            screen.draw()
+        self._batch.draw()
 
     def render(self):
         for screen in self.screens.values():
@@ -98,6 +96,9 @@ class Window(win.Window):
         self.render()
 
     # overriding base methods
+    def on_draw(self):
+        self.draw()
+
     def on_mouse_motion(self, x, y, dx, dy):
         self.mouse_move(x, y, dx, dy)
 
@@ -127,7 +128,8 @@ class Window(win.Window):
 
     def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         for screen in self.screens.values():
-            screen.mouse_drag(x - screen.x, y - screen.y, dx, dy, buttons, modifiers)
+            if screen.active:
+                screen.mouse_drag(x - screen.x, y - screen.y, dx, dy, buttons, modifiers)
         if self.focus:
             self.focus.mouse_drag(x - self.focus.x, y - self.focus.y, dx, dy, buttons, modifiers)
             if isinstance(self.focus, Slider):
@@ -136,7 +138,7 @@ class Window(win.Window):
 
     def mouse_down(self, x, y, buttons, modifiers):
         for screen in self.screens.values():
-            if screen.is_inside(x, y):
+            if screen.active and screen.is_inside(x, y):
                 screen.mouse_down(x - screen.x, y - screen.y, buttons, modifiers)
                 break
         if self.focus and self.focus.is_inside(x, y):
@@ -150,7 +152,7 @@ class Window(win.Window):
 
     def mouse_up(self, x, y, buttons, modifiers):
         for screen in self.screens.values():
-            if screen.is_inside(x, y):
+            if screen.active and screen.is_inside(x, y):
                 screen.mouse_up(x - screen.x, y - screen.y, buttons, modifiers)
                 break
         for b in self.buttons.values():
@@ -181,11 +183,13 @@ class Window(win.Window):
                 self.render()
         else:
             for screen in self.screens.values():
-                screen.key_down(symbol, modifiers)
+                if screen.active:
+                    screen.key_down(symbol, modifiers)
 
     def key_up(self, symbol, modifiers):
         for screen in self.screens.values():
-            screen.key_up(symbol, modifiers)
+            if screen.active:
+                screen.key_up(symbol, modifiers)
 
     def text_input(self, text):
         if self.focus:
@@ -193,7 +197,8 @@ class Window(win.Window):
 
     def tick(self, dt):
         for screen in self.screens.values():
-            screen.tick()
+            if screen.active:
+                screen.tick()
 
     # to be overriden
     def set_vars(self):

@@ -149,7 +149,7 @@ class LogisticScreen(pyg.screen.GraphScreen):
                     if py < 0 or y > self.h:
                         continue
                     self.add_point(px, py)
-            print(str(len(self.vertexes['points']) // 3) + ' points')
+            print(str(len(self._vertexes['points']) // 3) + ' points')
         elif self.mode == 1:
             # y = x
             lx1, ly1 = self.on_screen(-10, -10)

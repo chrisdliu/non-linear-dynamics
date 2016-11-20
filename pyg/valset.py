@@ -1,4 +1,9 @@
-class ValueObj:
+"""
+Defines value objects (ValueObj) and value sets (ValSet) for accessing variables between gui components.
+"""
+
+
+class ValueObj(object):
     def __init__(self, value):
         self.value = value
 
