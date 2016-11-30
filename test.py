@@ -1,3 +1,8 @@
-a = (1, 2)
-b = (3, 4)
-print(a + b)
+
+
+file = open('graph_coords.txt', 'r')
+line = file.readline()
+while line:
+    print(line.replace('\n', ''))
+    line = file.readline()
+print('EOF')

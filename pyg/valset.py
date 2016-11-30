@@ -28,10 +28,10 @@ class NumValue(ValueObj):
         assert self.is_valid(value), 'Invalid %s!' % str(self.__class__)
 
     def incr(self):
-        self.value += 1
+        self.set_val(self.value + 1)
 
     def decr(self):
-        self.value -= 1
+        self.set_val(self.value - 1)
 
     def is_valid(self, new_value):
         if 'l' in self.limit:

@@ -5,14 +5,32 @@ import pyglet.window as win
 
 
 class GUI_Obj:
-    def __init__(self, x, y, w, h, focusable=False):
+    def __init__(self, x, y, w, h, batch, focusable=False):
         self.x = x
         self.y = y
         self.w = w
         self.h = h
+        self._batch = batch
         self.focusable = focusable
+        self.visible = True
+        self.active = True
         self.is_focus = False
         self._vertex_lists = []
+
+    def on(self):
+        self.active = True
+        self.set_visible(True)
+
+    def off(self):
+        self.active = False
+        self.set_visible(False)
+
+    def set_visible(self, visible):
+        if visible:
+            self.render()
+        else:
+            self._clear()
+        self.visible = visible
 
     def is_inside(self, x, y):
         return self.x <= x < self.x + self.w and self.y <= y < self.y + self.h
@@ -20,7 +38,7 @@ class GUI_Obj:
     def _clear(self):
         for vlist in self._vertex_lists:
             vlist.delete()
-            self._vertex_lists.remove(vlist)
+        self._vertex_lists.clear()
 
     def add_vlist(self, vlist):
         self._vertex_lists.append(vlist)
@@ -57,15 +75,45 @@ class GUI_Obj:
         pass
 
 
+class Label(GUI_Obj):
+    def __init__(self, x, y, text, batch, color=(255, 255, 255)):
+        super().__init__(x, y, 0, 0, batch, False)
+        self._pyglet_label = pyglet.text.Label(text, font_name='Menlo', font_size=8, x=x, y=y, batch=batch,
+                                               group=graphics.OrderedGroup(1), color=(color[0], color[1], color[2], 255))
+
+    def set_text(self, text):
+        self._pyglet_label.text = text
+
+    def set_pos(self, x, y):
+        super().set_pos(x, y)
+        self._pyglet_label.x = x
+        self._pyglet_label.y = y
+
+
+class Box(GUI_Obj):
+    def __init__(self, x, y, w, h, batch, color=(255, 255, 255)):
+        super().__init__(x, y, w, h, batch, False)
+        self.color = color
+
+    def set_color(self, color):
+        self.color = color
+        self.render()
+
+    def render(self):
+        self._clear()
+        self.add_vlist(self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
+            ('v2f', (self.x, self.y, self.x + self.w, self.y, self.x + self.w, self.y + self.h, self.x, self.y + self.h)),
+            ('c3B', self.color * 4))))
+
+
 class Field(GUI_Obj):
     accepted = []
 
     def __init__(self, x, y, w, h, name, valobj, batch):
-        super().__init__(x, y, w, h, True)
+        super().__init__(x, y, w, h, batch, True)
         self.name = name
         self.valobj = valobj
         self.input = ''
-        self.batch = batch
         self._label = Label(x, y, self.get_label_text(), batch)
 
     def enter(self):
@@ -106,13 +154,14 @@ class Field(GUI_Obj):
         self._label.set_text(self.get_label_text())
 
     def render(self):
+        self._clear()
         self.update_label()
         if self.is_focus:
-            self.add_vlist(self.batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
+            self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
                 ('v2f', (self.x, self.y, self.x + self.w, self.y, self.x + self.w, self.y + self.h, self.x, self.y + self.h)),
                 ('c3B', (150, 150, 150) * 4)))
         else:
-            self.add_vlist(self.batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
+            self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
                 ('v2f', (self.x, self.y, self.x + self.w, self.y, self.x + self.w, self.y + self.h, self.x, self.y + self.h)),
                 ('c3B', (100, 100, 100) * 4)))
 
@@ -167,31 +216,25 @@ class ComplexField(NumField):
             return None
 
 
-class Label(GUI_Obj):
-    def __init__(self, x, y, text, batch, color=(255, 255, 255)):
-        super().__init__(x, y, 0, 0, False)
-        self._pyglet_label = pyglet.text.Label(text, font_name='Menlo', font_size=8, x=x, y=y, batch=batch,
-                                               group=graphics.OrderedGroup(1), color=(color[0], color[1], color[2], 255))
-
-    def set_text(self, text):
-        self._pyglet_label.text = text
-
-    def set_pos(self, x, y):
-        super().set_pos(x, y)
-        self._pyglet_label.x = x
-        self._pyglet_label.y = y
-
-
 class Button(GUI_Obj):
     def __init__(self, x, y, w, h, text, batch, action=None):
-        super().__init__(x, y, w, h)
-        self.batch = batch
+        super().__init__(x, y, w, h, batch)
         self.action = action
+        self._text = text
         self._label = Label(x, y, text, batch)
 
     def set_pos(self, x, y):
         super().set_pos(x, y)
         self._label.set_pos(x, y)
+
+    def set_visible(self, visible):
+        if visible:
+            self.render()
+            self.set_text(self._text)
+        else:
+            self._clear()
+            self.set_text('')
+        self.visible = visible
 
     def mouse_up(self, *args, **kwargs):
         if self.action:
@@ -202,7 +245,7 @@ class Button(GUI_Obj):
 
     def render(self):
         self._clear()
-        self.add_vlist(self.batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
+        self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
               ('v2f', (self.x, self.y, self.x + self.w, self.y, self.x + self.w, self.y + self.h, self.x, self.y + self.h)),
               ('c3B', (100, 100, 100) * 4)))
 
@@ -223,27 +266,31 @@ class ToggleButton(Button):
     def render(self):
         self._clear()
         if self.boolval.value:
-            self.add_vlist(self.batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
+            self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
                   ('v2f', (self.x, self.y, self.x + self.w, self.y, self.x + self.w, self.y + self.h, self.x, self.y + self.h)),
                   ('c3B', (150, 150, 150) * 4)))
         else:
-            self.add_vlist(self.batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
+            self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
                   ('v2f', (self.x, self.y, self.x + self.w, self.y, self.x + self.w, self.y + self.h, self.x, self.y + self.h)),
                   ('c3B', (100, 100, 100) * 4)))
 
 
 class Slider(GUI_Obj):
     def __init__(self, x, y, w, h, offs, field_name, valobj, low, high, batch):
-        super().__init__(x, y, w, h, True)
+        super().__init__(x, y, w, h, batch, True)
         self.offs = offs
         self.field_name = field_name
         self.valobj = valobj
         self.low = low
         self.high = high
         self._slider_pos = (valobj.value - low) / (high - low)
-        self.batch = batch
         self._label = Label(x, y, self.get_label_text(), batch)
         self._updated = False
+
+    def update_pos(self):
+        self._slider_pos = (self.valobj.value - self.low) / (self.high - self.low)
+        self._label.set_text(self.get_label_text())
+        self.render()
 
     def is_updated(self):
         if self._updated:
@@ -260,16 +307,16 @@ class Slider(GUI_Obj):
     def render(self):
         self._clear()
         if self.is_focus:
-            self.add_vlist(self.batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
+            self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
                 ('v2f', (self.x, self.y, self.x + self.w + self.offs, self.y,
                          self.x + self.w + self.offs, self.y + self.h, self.x, self.y + self.h)),
                 ('c3B', (150, 150, 150) * 4)))
         else:
-            self.add_vlist(self.batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
+            self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
                 ('v2f', (self.x, self.y, self.x + self.w + self.offs, self.y,
                          self.x + self.w + self.offs, self.y + self.h, self.x, self.y + self.h)),
                 ('c3B', (100, 100, 100) * 4)))
-        self.add_vlist(self.batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(1),
+        self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(1),
             ('v2f', (self.x + self._slider_pos * self.w + self.offs, self.y,
                      self.x + self._slider_pos * self.w + 2 + self.offs, self.y,
                      self.x + self._slider_pos * self.w + 2 + self.offs, self.y + self.h,

@@ -118,10 +118,10 @@ def get_data(mode, w, h, bl_x, bl_y, tr_x, tr_y, limit, max_iter, c):
 
 
 class JuliaScreen(pyg.screen.GraphScreen):
-    def __init__(self, x, y, width, height, bg=(255, 255, 255), valset=None, visible=True):
+    def __init__(self, x, y, width, height, valset, zoom_valobj, bg=(255, 255, 255), visible=True):
         self.mode = 0
         self.mouse_c = False
-        super().__init__(x, y, width, height, 0, 0, 5, 5, bg=bg, valset=valset, visible=visible)
+        super().__init__(x, y, width, height, 0, 0, 5, 5, valset, zoom_valobj, bg=bg, visible=visible)
         # img
         rawdata = np.zeros(self.w * self.h * 3, dtype=np.ubyte)
         self.img = pyglet.image.ImageData(self.w, self.h, 'RGB', rawdata)
@@ -146,10 +146,9 @@ class JuliaScreen(pyg.screen.GraphScreen):
 
         #flush
         start = time.time()
-        c_ubyte_p = ctypes.POINTER(ctypes.c_ubyte)
-        colors_ubyte = colors.astype(np.ubyte)
-        rawdata = colors_ubyte.ctypes.data_as(c_ubyte_p)
-        self.img.set_data('RGB', self.img.width * 3, rawdata)
+        del self.img
+        rawdata = colors.astype(np.ubyte).ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte))
+        self.img = pyglet.image.ImageData(self.w, self.h, 'RGB', rawdata)
         end = time.time()
         self.valset.set_val('flushtime', ((end - start) * 1000))
 
@@ -163,8 +162,8 @@ class JuliaScreen(pyg.screen.GraphScreen):
         end = time.time()
         self.valset.set_val('flushtime', ((end - start) * 1000))
 
-    def on_draw(self):
-        super().on_draw()
+    def draw(self):
+        super().draw()
         self.img.blit(self.x, self.y)
 
     def key_down(self, symbol, modifiers):
@@ -172,8 +171,6 @@ class JuliaScreen(pyg.screen.GraphScreen):
 
     def resize(self, width, height):
         self.refit(width, height - 200)
-        self.img.width = self.w
-        self.img.height = self.h
 
     def mouse_move(self, x, y, dx, dy):
         if self.is_inside(x + self.x, y + self.y) and self.mouse_c:
@@ -183,19 +180,19 @@ class JuliaScreen(pyg.screen.GraphScreen):
 
 class JuliaWindow(pyg.window.Window):
     def set_vars(self):
-        self.valset.add_num_value('sz', .5)
-        self.valset.add_num_value('max_iter', 25)
-        self.valset.add_num_value('limit', 2.0)
-        self.valset.add_num_value('c', -.77 + .22j)
-        self.valset.add_num_value('calctime', 0.0)
-        self.valset.add_num_value('flushtime', 0.0)
+        self.valset.add_float_value('sz', .5, limit='ul', inclusive='', low=0, high=1)
+        self.valset.add_int_value('max_iter', 25, limit='l', low=1)
+        self.valset.add_float_value('limit', 2.0, limit='l', inclusive='', low=0)
+        self.valset.add_complex_value('c', -.77 + .22j)
+        self.valset.add_float_value('calctime', 0.0)
+        self.valset.add_float_value('flushtime', 0.0)
 
-        main = JuliaScreen(0, 200, 500, 500, valset=self.valset)
+        main = JuliaScreen(0, 200, 500, 500, self.valset, self.valset.get_valobj('sz'))
         self.add_screen('main', main)
 
-        self.add_float_field('zoomfield', 230, 55, 100, 15, 'Zoom', self.valset.get_valobj('sz'), limit='ul', inclusive='', low=0, high=1)
-        self.add_int_field('max_iter', 230, 155, 100, 15, 'Max Iter', self.valset.get_valobj('max_iter'), limit='l', low=1)
-        self.add_float_field('limit', 230, 135, 100, 15, 'Limit', self.valset.get_valobj('limit'), limit='l', inclusive='', low=0)
+        self.add_float_field('zoomfield', 230, 55, 100, 15, 'Zoom', self.valset.get_valobj('sz'))
+        self.add_int_field('max_iter', 230, 155, 100, 15, 'Max Iter', self.valset.get_valobj('max_iter'))
+        self.add_float_field('limit', 230, 135, 100, 15, 'Limit', self.valset.get_valobj('limit'))
         self.add_complex_field('c', 230, 75, 100, 15, 'C', self.valset.get_valobj('c'))
 
         self.add_button('resetb', 150, 120, 40, 40, 'Reset', self.reset)
@@ -205,10 +202,11 @@ class JuliaWindow(pyg.window.Window):
         self.add_button('m3b', 50, 70, 80, 20, 'Julia z^3+c', lambda: self.set_mode(2))
         self.add_button('m4b', 50, 40, 80, 20, 'Julia c*sin(z)', lambda: self.set_mode(3))
 
-        self.add_label('leftlabel', 10, 180, '%.5f' % (self.screens['main'].sx - self.screens['main'].sw / 2), color=(255, 0, 255))
-        self.add_label('rightlabel', self.width- 60, 180, '%.5f' % (self.screens['main'].sx + self.screens['main'].sw / 2), color=(255, 0, 255))
-        self.add_label('toplabel', 10, self.height + 180, '%.5f' % (self.screens['main'].sy + self.screens['main'].sh / 2), color=(255, 0, 255))
-        self.add_label('bottomlabel', 10, 210, '%.5f' % (self.screens['main'].sy - self.screens['main'].sh / 2), color=(255, 0, 255))
+        main = self.get_screen('main')
+        self.add_label('leftlabel', 10, 180, '%.5f' % main.min_gx, color=(255, 0, 255))
+        self.add_label('rightlabel', self.width - 60, 180, '%.5f' % main.max_gx, color=(255, 0, 255))
+        self.add_label('toplabel', 10, self.height + 180, '%.5f' % main.max_gy, color=(255, 0, 255))
+        self.add_label('bottomlabel', 10, 210, '%.5f' % main.min_gy, color=(255, 0, 255))
         self.add_label('calclabel', self.width - 160, 110, '  calc time: %.5f' % self.valset.get_val('calctime'))
         self.add_label('flushlabel', self.width - 160, 90, ' flush time: %.5f' % self.valset.get_val('flushtime'))
 
@@ -225,12 +223,13 @@ class JuliaWindow(pyg.window.Window):
         self.render()
 
     def update_labels(self):
-        self.labels['leftlabel'].set_text('%.5f' % (self.screens['main'].sx - self.screens['main'].sw / 2))
-        self.labels['rightlabel'].set_text('%.5f' % (self.screens['main'].sx + self.screens['main'].sw / 2))
+        main = self.get_screen('main')
+        self.labels['leftlabel'].set_text('%.5f' % main.min_gx)
+        self.labels['rightlabel'].set_text('%.5f' % main.max_gx)
         self.labels['rightlabel'].set_pos(self.width - 60, 180)
-        self.labels['toplabel'].set_text('%.5f' % (self.screens['main'].sy + self.screens['main'].sh / 2))
+        self.labels['toplabel'].set_text('%.5f' % main.max_gy)
         self.labels['toplabel'].set_pos(10, self.height + 180)
-        self.labels['bottomlabel'].set_text('%.5f' % (self.screens['main'].sy - self.screens['main'].sh / 2))
+        self.labels['bottomlabel'].set_text('%.5f' % main.min_gy)
         self.labels['calclabel'].set_text('  calc time: %.5f ms' % self.valset.get_val('calctime'))
         self.labels['calclabel'].set_pos(self.width - 160, 110)
         self.labels['flushlabel'].set_text(' flush time: %.5f ms' % self.valset.get_val('flushtime'))

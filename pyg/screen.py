@@ -281,6 +281,7 @@ class GraphScreen(Screen):
         self._ogw = gw
         self._ogh = gh
         self.zoom_valobj = zoom_valobj
+        self.total_zoom = 1
         self.drag = False
         self.offsx = 0
         self.offsy = 0
@@ -296,6 +297,7 @@ class GraphScreen(Screen):
         Resets the graph and renders the screen
         """
         self.reset_graph()
+        self.total_zoom = 1
         self.render()
 
     def reset_graph(self):
@@ -321,6 +323,14 @@ class GraphScreen(Screen):
         self._ogw = gw
         self._ogh = gh
 
+    def set_graph_coords(self, gx, gy, zoom):
+        self.gx = gx
+        self.gy = gy
+        self.total_zoom = zoom
+        sqrt_z = zoom ** .5
+        self.gw = self._ogw / sqrt_z
+        self.gh = self.gw * self.h / self.w
+
     def resize(self, width, height):
         """
         Resizes the screen based on the window's width and height
@@ -335,9 +345,12 @@ class GraphScreen(Screen):
         :param new_width: new screen width
         :param new_height: new screen height
         """
+        old_gw = self.gw
+        old_gh = self.gh
         self.gw *= new_width / self.w
         self.gh *= new_height / self.h
         self.set_graph_minmax()
+        self.total_zoom *= (old_gw * old_gh) / (self.gw * self.gh)
         self.w = new_width
         self.h = new_height
 
@@ -416,6 +429,7 @@ class GraphScreen(Screen):
             self.gw *= self.zoom_valobj.value
             self.gh *= self.zoom_valobj.value
             self.set_graph_minmax()
+            self.total_zoom *= (1 / self.zoom_valobj.value) ** 2
             #print('zoomed to %.5f,%.5f with size %.9f,%.9f' % (self.gx, self.gy, self.gw, self.gh))
         elif button == win.mouse.RIGHT:
             self.gx = self.gx - self.gw / 2 + x * self.gw / self.w
@@ -423,6 +437,7 @@ class GraphScreen(Screen):
             self.gw /= self.zoom_valobj.value
             self.gh /= self.zoom_valobj.value
             self.set_graph_minmax()
+            self.total_zoom /= (1 / self.zoom_valobj.value) ** 2
             #print('zoomed to %.5f,%.5f with size %.9f,%.9f' % (self.gx, self.gy, self.gw, self.gh))
         elif button == win.mouse.MIDDLE:
             self.drag = False
