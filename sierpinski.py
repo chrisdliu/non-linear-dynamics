@@ -5,8 +5,8 @@ from vmath import *
 
 class SierpScreen(pyg.screen.GraphScreen):
     def render(self):
-        tri = (Vec2(self.on_screen(1, 1)), Vec2(self.on_screen(3, 1)), Vec2(self.on_screen2, 1 + 3 ** .5))
-        p = Vec2(self.on_screen(2, 1))
+        tri = (Vector(*self.on_screen(1, 1)), Vector(*self.on_screen(3, 1)), Vector(*self.on_screen(2, 1 + 3 ** .5)))
+        p = Vector(*self.on_screen(2, 1))
         colors = ((255, 0, 0), (0, 255, 0), (0, 0, 255))
 
         for i in range(self.get_val('iter')):

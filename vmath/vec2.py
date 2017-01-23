@@ -14,17 +14,17 @@ class Vec2:
 
     def __mul__(self, other):
         if not isinstance(other, numbers.Number):
-            raise TypeError('Can\'t multiply by a non-number!')
+            raise ArithmeticError('Can\'t multiply by a non-number!')
         return Vec2(self.x * other, self.y * other)
 
     def __floordiv__(self, other):
         if not isinstance(other, numbers.Number):
-            raise TypeError('Can\'t divide by a non-number!')
+            raise ArithmeticError('Can\'t divide by a non-number!')
         return Vec2(self.x // other, self.y // other)
 
     def __truediv__(self, other):
         if not isinstance(other, numbers.Number):
-            raise TypeError('Can\'t divide by a non-number!')
+            raise ArithmeticError('Can\'t divide by a non-number!')
         return Vec2(self.x / other, self.y / other)
 
     def __neg__(self):
