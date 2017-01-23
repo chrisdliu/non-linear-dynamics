@@ -46,7 +46,7 @@ def fprime(z):
 
 @jit
 def get_root(guess, roots, palette):
-    #'''
+    '''
     root = roots[0]
     idx = 0
     diff = abs(guess - root)
@@ -55,8 +55,8 @@ def get_root(guess, roots, palette):
             root = roots[i]
             diff = abs(guess - root)
             idx = i
-    #'''
     '''
+    #'''
     h = np.angle(guess) * 180 / np.pi
     #h += 180
     if h < 0:
@@ -97,13 +97,13 @@ def get_root(guess, roots, palette):
     g *= 255
     b *= 255
     '''
-    r = (palette[idx][0] * diff) % 256
-    g = (palette[idx][1] * diff) % 256
+    r = palette[idx][0]
+    g = palette[idx][1]
     b = palette[idx][2]
     #r = r // (1 + diff * .1)
     #g = g // (1 + diff * .1)
     #b //= 1 + diff
-    #'''
+    '''
     return ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff)
 
 
@@ -123,32 +123,6 @@ def newtons(guess, roots, max_iter, tol, palette, output):
         guess -= a * fz / fpz
         if i == max_iter - 1:
             output[0] = get_root(guess, roots, palette)
-
-
-@guvectorize('(complex128[:], complex128[:], int32[:])', '(),(n)->()', target='parallel')
-def parse_color_data(color_data, roots, output):
-    color_data = color_data[0]
-    if color_data == roots[0]:
-        r = 255
-        g = 0
-        b = 0
-    elif color_data == roots[1]:
-        r = 255
-        g = 255
-        b = 0
-    elif color_data == roots[2]:
-        r = 0
-        g = 255
-        b = 0
-    #elif color_data == roots[3]:
-    #    r = 0
-    #    g = 0
-    #    b = 255
-    else:
-        r = 0
-        g = 0
-        b = 0
-    output[0] = ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff)
 
 
 @jit

@@ -34,7 +34,7 @@ class ScreenGroup(graphics.OrderedGroup):
 
 
 class Screen:
-    _vertex_types = ('points', 'lines', 'triangles', 'quads')
+    _vertex_types = ('points', 'lines', 'line_strip', 'triangles', 'quads')
 
     def __init__(self, x, y, width, height, valset, bg=(255, 255, 255), visible=True, active=True):
         self.x = x
@@ -51,10 +51,10 @@ class Screen:
         self._vertexes = {}
         self._colors = {}
         self._vertex_lists['bg'] = None
-        for type in self._vertex_types:
-            self._vertex_lists[type] = None
-            self._vertexes[type] = []
-            self._colors[type] = []
+        for vtype in self._vertex_types:
+            self._vertex_lists[vtype] = None
+            self._vertexes[vtype] = []
+            self._colors[vtype] = []
 
         self.bg = bg
         self.set_bg(bg)
@@ -72,10 +72,10 @@ class Screen:
         if visible:
             self.render()
         else:
-            for type in self._vertex_lists.keys():
-                if self._vertex_lists[type]:
-                    self._vertex_lists[type].delete()
-                self._vertex_lists[type] = None
+            for vtype in self._vertex_lists.keys():
+                if self._vertex_lists[vtype]:
+                    self._vertex_lists[vtype].delete()
+                self._vertex_lists[vtype] = None
 
     def set_active(self, active):
         """
@@ -156,6 +156,10 @@ class Screen:
         self._vertexes['lines'] = lines
         self._colors['lines'] = colors
 
+    def set_line_strip(self, lines, colors):
+        self._vertexes['line_strip'] = lines
+        self._colors['line_strip'] = colors
+
     def add_triangle(self, x1, y1, x2, y2, x3, y3, z=0, color=(0, 0, 0), uniform=True, colors=((0,) * 9)):
         self._vertexes['triangles'].extend((x1, y1, z, x2, y2, z, x3, y3, z))
         if uniform:
@@ -180,29 +184,31 @@ class Screen:
             self._vertex_lists['bg'] = self.batch.add(4, gl.GL_QUADS, self._bg_group,
                                                       ('v2f', (0, 0, 0, self.h, self.w, self.h, self.w, 0)),
                                                       ('c3B', self.bg * 4))
-        for type in self._vertex_types:
-            if self._vertex_lists[type]:
-                self._vertex_lists[type].delete()
-                self._vertex_lists[type] = None
+        for vtype in self._vertex_types:
+            if self._vertex_lists[vtype]:
+                self._vertex_lists[vtype].delete()
+                self._vertex_lists[vtype] = None
             vlist = None
             if not self.visible:
                 continue
-            if type == 'points':
-                vlist = self.batch.add(len(self._vertexes[type]) // 3, gl.GL_POINTS, self._group, ('v3f', self._vertexes[type]), ('c3B', self._colors[type]))
-            elif type == 'lines':
-                vlist = self.batch.add(len(self._vertexes[type]) // 3, gl.GL_LINES, self._group, ('v3f', self._vertexes[type]), ('c3B', self._colors[type]))
-            elif type == 'triangles':
-                vlist = self.batch.add(len(self._vertexes[type]) // 3, gl.GL_TRIANGLES, self._group, ('v3f', self._vertexes[type]), ('c3B', self._colors[type]))
-            elif type == 'quads':
-                vlist = self.batch.add(len(self._vertexes[type]) // 3, gl.GL_QUADS, self._group, ('v3f', self._vertexes[type]), ('c3B', self._colors[type]))
-            self._vertex_lists[type] = vlist
+            if vtype == 'points':
+                vlist = self.batch.add(len(self._vertexes[vtype]) // 3, gl.GL_POINTS, self._group, ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+            elif vtype == 'lines':
+                vlist = self.batch.add(len(self._vertexes[vtype]) // 3, gl.GL_LINES, self._group, ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+            elif vtype == 'line_strip':
+                vlist = self.batch.add(len(self._vertexes[vtype]) // 2, gl.GL_LINE_STRIP, self._group, ('v2f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+            elif vtype == 'triangles':
+                vlist = self.batch.add(len(self._vertexes[vtype]) // 3, gl.GL_TRIANGLES, self._group, ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+            elif vtype == 'quads':
+                vlist = self.batch.add(len(self._vertexes[vtype]) // 3, gl.GL_QUADS, self._group, ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+            self._vertex_lists[vtype] = vlist
 
         self.clear_buffer()
 
     def clear_buffer(self):
-        for type in self._vertex_types:
-            self._vertexes[type] = []
-            self._colors[type] = []
+        for vtype in self._vertex_types:
+            self._vertexes[vtype] = []
+            self._colors[vtype] = []
 
     def draw(self):
         self.batch.draw()
@@ -271,15 +277,10 @@ class GraphScreen(Screen):
         super().__init__(x, y, width, height, valset, bg=bg, visible=visible, active=active)
         self._ow = width
         self._oh = height
-        self.gx = gx
-        self.gy = gy
-        self.gw = gw
-        self.gh = gh
+        self.set_graph_coords(gx, gy, gw, gh)
         self.set_graph_minmax()
-        self._ogx = gx
-        self._ogy = gy
-        self._ogw = gw
-        self._ogh = gh
+        self.reset_to(gx, gy, gw, gh)
+
         self.zoom_valobj = zoom_valobj
         self.total_zoom = 1
         self.drag = False
@@ -292,7 +293,7 @@ class GraphScreen(Screen):
         self.min_gy = self.gy - self.gh / 2
         self.max_gy = self.gy + self.gh / 2
 
-    def reset(self):
+    def reset_screen(self):
         """
         Resets the graph and renders the screen
         """
@@ -323,7 +324,13 @@ class GraphScreen(Screen):
         self._ogw = gw
         self._ogh = gh
 
-    def set_graph_coords(self, gx, gy, zoom):
+    def set_graph_coords(self, gx, gy, gw, gh):
+        self.gx = gx
+        self.gy = gy
+        self.gw = gw
+        self.gh = gh
+
+    def set_graph_view(self, gx, gy, zoom):
         self.gx = gx
         self.gy = gy
         self.total_zoom = zoom
@@ -405,6 +412,9 @@ class GraphScreen(Screen):
         return x * self.gw / self.w + self.gx - self.gw / 2, y * self.gh / self.h + self.gy - self.gh / 2
 
     def draw(self):
+        """
+        Translates by the drag, draws, and translates back
+        """
         gl.glTranslatef(self.offsx, self.offsy, 0)
         self.batch.draw()
         gl.glTranslatef(-self.offsx, -self.offsy, 0)

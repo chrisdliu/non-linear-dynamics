@@ -240,12 +240,12 @@ class MandelScreen(pyg.screen.GraphScreen):
         super().__init__(x, y, width, height, 0, 0, 2.5, 5, valset, zoom_valobj, bg=bg, visible=visible)
         self.palette = np.array([[0, 0, 0], [100, 0, 100], [255, 255, 255], [255, 161, 3]], dtype=np.int32)
 
-    def reset(self):
+    def reset_screen(self):
         """
         Resets the graph
         """
         self.set_val('max_iter', 24)
-        super().reset()
+        super().reset_screen()
 
     def render(self):
         """
@@ -313,14 +313,14 @@ class JuliaScreen(pyg.screen.GraphScreen):
         :param mode: mode
         """
         self.mode = mode
-        self.reset()
+        self.reset_screen()
 
-    def reset(self):
+    def reset_screen(self):
         """
         Resets the graph
         """
         self.set_val('max_iter', 24)
-        super().reset()
+        super().reset_screen()
 
     def render(self):
         """
@@ -560,14 +560,14 @@ class JuliaWindow(pyg.window.Window):
         if mode in [0, 2, 4, 6]:
             gx, gy, zoom, max_iter, c = self.saved_coords[mode][self.saved_coords_idx]
             main = self.get_screen('main')
-            main.set_graph_coords(gx, gy, zoom)
+            main.set_graph_view(gx, gy, zoom)
             self.set_val('max_iter', max_iter)
             self.set_val('c', c)
             self.render()
         elif mode in [1, 3, 5]:
             gx, gy, zoom, max_iter = self.saved_coords[mode][self.saved_coords_idx]
             main = self.get_screen('main')
-            main.set_graph_coords(gx, gy, zoom)
+            main.set_graph_view(gx, gy, zoom)
             self.set_val('max_iter', max_iter)
             self.render()
 
@@ -599,9 +599,9 @@ class JuliaWindow(pyg.window.Window):
                     self.saved_coords_idx = 0
 
     def reset(self):
-        self.screens['main'].reset()
+        self.screens['main'].reset_screen()
         if self.screens['main'].mode == 7:
-            self.screens['mandel'].reset()
+            self.screens['mandel'].reset_screen()
 
     def set_mode(self, mode):
         """

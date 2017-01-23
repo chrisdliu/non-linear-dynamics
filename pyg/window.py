@@ -7,7 +7,7 @@ class Window(win.Window):
     def __init__(self, width=600, height=600, caption='Window', bg=(0, 0, 0, 1), *args, **kwargs):
         super().__init__(width=width, height=height, caption=caption, *args, **kwargs)
         self.set_minimum_size(width, height)
-        gl.glClearColor(bg[0], bg[1], bg[2], bg[3])
+        gl.glClearColor(*bg)
 
         self._batch = graphics.Batch()
         self.screens = {}
@@ -32,14 +32,14 @@ class Window(win.Window):
     def add_toggle_button(self, name, x, y, w, h, text, boolval):
         self.buttons[name] = ToggleButton(x, y, w, h, text, boolval, self._batch)
 
-    def add_label(self, name, x, y, text, color=(255, 255, 255)):
-        self.labels[name] = Label(x, y, text, self._batch, color=color)
-
-    def add_float_field(self, name, x, y, w, h, field_name, valobj):
-        self.fields[name] = FloatField(x, y, w, h, field_name, valobj, self._batch)
+    def add_label(self, name, x, y, color=(255, 255, 255)):
+        self.labels[name] = Label(x, y, '', self._batch, color=color)
 
     def add_int_field(self, name, x, y, w, h, field_name, valobj):
         self.fields[name] = IntField(x, y, w, h, field_name, valobj, self._batch)
+
+    def add_float_field(self, name, x, y, w, h, field_name, valobj):
+        self.fields[name] = FloatField(x, y, w, h, field_name, valobj, self._batch)
 
     def add_complex_field(self, name, x, y, w, h, field_name, valobj):
         self.fields[name] = ComplexField(x, y, w, h, field_name, valobj, self._batch)
@@ -135,8 +135,7 @@ class Window(win.Window):
         if self.focus:
             self.focus.mouse_drag(x - self.focus.x, y - self.focus.y, dx, dy, buttons, modifiers)
             if isinstance(self.focus, Slider):
-                if self.focus.is_updated():
-                    self.render()
+                self.render()
 
     def mouse_down(self, x, y, buttons, modifiers):
         for screen in self.screens.values():

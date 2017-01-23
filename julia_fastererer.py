@@ -214,7 +214,7 @@ class JuliaWindow(pyg.window.Window):
         self.screens['main'].toggle_mouse_c()
 
     def reset(self):
-        self.screens['main'].reset()
+        self.screens['main'].reset_screen()
 
     def set_mode(self, mode):
         if mode == self.screens['main'].mode:

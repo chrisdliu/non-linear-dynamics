@@ -20,3 +20,8 @@ from .gui import *
 from .screen import *
 from .valset import *
 from .window import *
+
+
+def run(PygWindow, width=500, height=700, caption='Caption Here'):
+    window = PygWindow(width=width, height=height, caption=caption, bg=(0, 0, 0, 1), resizable=True)
+    pyglet.app.run()

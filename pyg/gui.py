@@ -3,17 +3,19 @@ import pyglet.gl as gl
 import pyglet.graphics as graphics
 import pyglet.window as win
 
+from .valset import *
 
-class GUI_Obj:
-    def __init__(self, x, y, w, h, batch, focusable=False):
+
+class GuiObj:
+    def __init__(self, x, y, w, h, batch, focusable=False, visible=True, active=True):
         self.x = x
         self.y = y
         self.w = w
         self.h = h
         self._batch = batch
         self.focusable = focusable
-        self.visible = True
-        self.active = True
+        self.visible = visible
+        self.active = active
         self.is_focus = False
         self._vertex_lists = []
 
@@ -75,11 +77,11 @@ class GUI_Obj:
         pass
 
 
-class Label(GUI_Obj):
+class Label(GuiObj):
     def __init__(self, x, y, text, batch, color=(255, 255, 255)):
-        super().__init__(x, y, 0, 0, batch, False)
+        super().__init__(x, y, 0, 0, batch)
         self._pyglet_label = pyglet.text.Label(text, font_name='Menlo', font_size=8, x=x, y=y, batch=batch,
-                                               group=graphics.OrderedGroup(1), color=(color[0], color[1], color[2], 255))
+                                               group=graphics.OrderedGroup(1), color=(*color, 255))
 
     def set_text(self, text):
         self._pyglet_label.text = text
@@ -90,9 +92,9 @@ class Label(GUI_Obj):
         self._pyglet_label.y = y
 
 
-class Box(GUI_Obj):
+class Box(GuiObj):
     def __init__(self, x, y, w, h, batch, color=(255, 255, 255)):
-        super().__init__(x, y, w, h, batch, False)
+        super().__init__(x, y, w, h, batch)
         self.color = color
 
     def set_color(self, color):
@@ -106,7 +108,7 @@ class Box(GUI_Obj):
             ('c3B', self.color * 4))))
 
 
-class Field(GUI_Obj):
+class Field(GuiObj):
     accepted = []
 
     def __init__(self, x, y, w, h, name, valobj, batch):
@@ -121,10 +123,8 @@ class Field(GUI_Obj):
         super().enter()
 
     def exit(self):
-        new_value = self.parse()
+        self.valobj.set_val_cast(self.input)
         self.input = ''
-        if new_value:  # if new_value is not None
-            self.valobj.set_val(new_value)
         super().exit()
 
     def set_pos(self, x, y):
@@ -165,15 +165,39 @@ class Field(GUI_Obj):
                 ('v2f', (self.x, self.y, self.x + self.w, self.y, self.x + self.w, self.y + self.h, self.x, self.y + self.h)),
                 ('c3B', (100, 100, 100) * 4)))
 
-    # to be overriden
-    def parse(self):
-        return ''
-
-    def is_valid(self, pvalue):
-        return True
-
 
 class NumField(Field):
+    accepted = [
+        '0',
+        '1',
+        '2',
+        '3',
+        '4',
+        '5',
+        '6',
+        '7',
+        '8',
+        '9',
+        '.',
+        '-',
+    ]
+
+
+class FloatField(NumField):
+    def __init__(self, x, y, w, h, name, valobj, batch):
+        if type(valobj) is not FloatValue:
+            raise TypeError('Value object is not a FloatValue!')
+        super().__init__(x, y, w, h, name, valobj, batch)
+
+
+class IntField(NumField):
+    def __init__(self, x, y, w, h, name, valobj, batch):
+        if type(valobj) is not IntValue:
+            raise TypeError('Value object is not a IntValue!')
+        super().__init__(x, y, w, h, name, valobj, batch)
+
+
+class ComplexField(NumField):
     accepted = [
         '0',
         '1',
@@ -191,32 +215,13 @@ class NumField(Field):
         'j',
     ]
 
-
-class FloatField(NumField):
-    def parse(self):
-        try:
-            return float(self.input)
-        except ValueError:
-            return None
+    def __init__(self, x, y, w, h, name, valobj, batch):
+        if type(valobj) is not ComplexValue:
+            raise TypeError('Value object is not a ComplexValue!')
+        super().__init__(x, y, w, h, name, valobj, batch)
 
 
-class IntField(NumField):
-    def parse(self):
-        try:
-            return int(self.input)
-        except ValueError:
-            return None
-
-
-class ComplexField(NumField):
-    def parse(self):
-        try:
-            return complex(self.input)
-        except ValueError:
-            return None
-
-
-class Button(GUI_Obj):
+class Button(GuiObj):
     def __init__(self, x, y, w, h, text, batch, action=None):
         super().__init__(x, y, w, h, batch)
         self.action = action
@@ -275,7 +280,7 @@ class ToggleButton(Button):
                   ('c3B', (100, 100, 100) * 4)))
 
 
-class Slider(GUI_Obj):
+class Slider(GuiObj):
     def __init__(self, x, y, w, h, offs, field_name, valobj, low, high, batch):
         super().__init__(x, y, w, h, batch, True)
         self.offs = offs
@@ -285,18 +290,11 @@ class Slider(GUI_Obj):
         self.high = high
         self._slider_pos = (valobj.value - low) / (high - low)
         self._label = Label(x, y, self.get_label_text(), batch)
-        self._updated = False
 
     def update_pos(self):
         self._slider_pos = (self.valobj.value - self.low) / (self.high - self.low)
         self._label.set_text(self.get_label_text())
         self.render()
-
-    def is_updated(self):
-        if self._updated:
-            self._updated = False
-            return True
-        return False
 
     def get_label_text(self):
         return self.field_name + ': ' + str(self.valobj.value)
@@ -330,26 +328,20 @@ class Slider(GUI_Obj):
         if self._slider_pos > 1:
             self._slider_pos = 1
         new_value = (self._slider_pos * (self.high - self.low)) + self.low
-        self.valobj.value = self.parse(new_value)
+        self.valobj.set_val_cast(new_value)
         self._label.set_text(self.get_label_text())
         self.render()
 
-    def parse(self, new_value):
-        self._updated = True
-        return new_value
-
 
 class IntSlider(Slider):
-    def parse(self, new_value):
-        new_value = int(new_value)
-        if self.valobj.value != new_value:
-            self._updated = True
-        return new_value
+    def __init__(self, x, y, w, h, offs, field_name, valobj, low, high, batch):
+        if type(valobj) is not IntValue:
+            raise TypeError('Value object is not IntValue!')
+        super().__init__(x, y, w, h, offs, field_name, valobj, low, high, batch)
 
 
 class FloatSlider(Slider):
-    def parse(self, new_value):
-        new_value = float(new_value)
-        if self.valobj.value != new_value:
-            self._updated = True
-        return new_value
+    def __init__(self, x, y, w, h, offs, field_name, valobj, low, high, batch):
+        if type(valobj) is not FloatValue:
+            raise TypeError('Value object is not FloatValue!')
+        super().__init__(x, y, w, h, offs, field_name, valobj, low, high, batch)

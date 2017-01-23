@@ -1,9 +1,9 @@
 """
-Defines value objects (ValueObj) and value sets (ValSet) for accessing variables between gui components.
+Defines value objects (Value) and value sets (ValSet) for accessing variables between gui components.
 """
 
 
-class ValueObj(object):
+class Value(object):
     def __init__(self, value):
         self.value = value
 
@@ -14,18 +14,26 @@ class ValueObj(object):
         if self.is_valid(new_value):
             self.value = new_value
 
+    def set_val_cast(self, new_value):
+        parsed_value = self.parse(new_value)
+        if parsed_value is not None:
+            self.set_val(parsed_value)
+
+    def parse(self, new_value_cast):
+        return None
+
     def is_valid(self, new_value):
         return True
 
 
-class NumValue(ValueObj):
+class NumValue(Value):
     def __init__(self, value, limit='', inclusive='ul', low=0, high=1):
         super().__init__(value)
         self.limit = limit
         self.inclusive = inclusive
         self.low = low
         self.high = high
-        assert self.is_valid(value), 'Invalid %s!' % str(self.__class__)
+        assert self.is_valid(value), 'Invalid default %s!' % str(self.__class__)
 
     def incr(self):
         self.set_val(self.value + 1)
@@ -36,10 +44,10 @@ class NumValue(ValueObj):
     def is_valid(self, new_value):
         if 'l' in self.limit:
             if 'l' in self.inclusive:
-                if self.low > new_value:
+                if new_value < self.low:
                     return False
             else:
-                if self.low >= new_value:
+                if new_value <= self.low:
                     return False
         if 'u' in self.limit:
             if 'u' in self.inclusive:
@@ -55,10 +63,22 @@ class FloatValue(NumValue):
     def __str__(self):
         return '%.5f' % self.value
 
+    def parse(self, new_value_cast):
+        try:
+            return float(new_value_cast)
+        except ValueError:
+            return None
+
 
 class IntValue(NumValue):
     def __str__(self):
         return '%i' % self.value
+
+    def parse(self, new_value_cast):
+        try:
+            return int(new_value_cast)
+        except ValueError:
+            return None
 
     def is_valid(self, new_value):
         if new_value % 1 != 0:
@@ -70,10 +90,22 @@ class ComplexValue(NumValue):
     def __str__(self):
         return '%.3f + %.3fj' % (self.value.real, self.value.imag)
 
+    def parse(self, new_value_cast):
+        try:
+            return complex(new_value_cast)
+        except ValueError:
+            return None
 
-class BoolValue(ValueObj):
+
+class BoolValue(Value):
     def toggle(self):
         self.value = not self.value
+
+    def parse(self, new_value_cast):
+        try:
+            return bool(new_value_cast)
+        except ValueError:
+            return None
 
     def is_valid(self, new_value):
         return type(new_value) == bool

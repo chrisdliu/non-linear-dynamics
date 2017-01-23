@@ -3,7 +3,7 @@ import pyglet
 
 
 class ComplexScreen(pyg.screen.GraphScreen):
-    def reset(self):
+    def reset_screen(self):
         self.sx = 0
         self.sy = 0
         self.sw = 10
@@ -67,7 +67,7 @@ class ComplexWindow(pyg.window.Window):
         self.add_float_field('power', 260, 135, 100, 15, 'Power', self.valset.get_obj('power'), limit='l', inclusive='', low=0)
         self.add_int_field('hqw', 260, 155, 100, 15, 'Quality', self.valset.get_obj('hqw'))
         self.add_complex_field('c', 260, 95, 100, 15, 'C', self.valset.get_obj('c'))
-        self.add_button('resetb', 190, 120, 40, 40, 'Reset', self.screens['main'].reset)
+        self.add_button('resetb', 190, 120, 40, 40, 'Reset', self.screens['main'].reset_screen)
 
 
 window = ComplexWindow(width=500, height=700, caption='Complex Graph', bg=(0, 0, 0, 1), resizable=True)

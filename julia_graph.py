@@ -4,7 +4,7 @@ import time
 
 
 class JuliaScreen(pyg.screen.GraphScreen):
-    def reset(self):
+    def reset_screen(self):
         self.sx = 0
         self.sy = 0
         self.sw = 5
@@ -55,7 +55,7 @@ class JuliaWindow(pyg.window.Window):
         self.add_screen('main', screen)
         self.add_int_field('qual', 260, 155, 100, 15, 'Quality', self.valset.get_obj('qual'))
         self.add_complex_field('c', 260, 95, 100, 15, 'C', self.valset.get_obj('c'))
-        self.add_button('resetb', 190, 120, 40, 40, 'Reset', self.screens['main'].reset)
+        self.add_button('resetb', 190, 120, 40, 40, 'Reset', self.screens['main'].reset_screen)
 
 
 window = JuliaWindow(width=500, height=700, caption='Julia Graph', bg=(0, 0, 0, 1), resizable=True)

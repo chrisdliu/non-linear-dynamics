@@ -47,9 +47,9 @@ def get_next(a, x):
 
 
 class LogisticScreen(pyg.screen.GraphScreen):
-    def __init__(self, x, y, width, height, bg=(255, 255, 255), valset=None):
+    def __init__(self, x, y, width, height, valset, zoom_valobj, bg=(255, 255, 255)):
         self.mode = 0  # 0-bifurcation 1-cobweb 2-time series
-        super().__init__(x, y, width, height, bg=bg, valset=valset)
+        super().__init__(x, y, width, height, .5, .5, 1, 1, valset, zoom_valobj, bg=bg)
         self.runcobweb = False
         self.cobwebframe = []
         self.fpoints = []
@@ -65,31 +65,17 @@ class LogisticScreen(pyg.screen.GraphScreen):
         :param buttons: the window's buttons
         """
         self.mode = m
+        if m == 0:
+            self.reset_to(3.5, .5, 1, 1)
+        elif m == 1:
+            self.reset_to(.5, .5, 1, 1)
+        else:
+            self.reset_to(300, .5, 600, 1)
         if self.mode != 1:
             self.runcobweb = False
             buttons['runcob'].set_text('Run')
-        self.reset()
+        self.reset_screen()
 
-    def reset(self):
-        """
-        Resets the screen's graph
-        """
-        if self.mode == 0:
-            self.sx = 3.5
-            self.sy = .5
-            self.sw = 1 * (self.w / 600)
-            self.sh = 1 * (self.h / 600)
-        elif self.mode == 1:
-            self.sx = 0.5
-            self.sy = 0.5
-            self.sw = 1 * (self.w / 600)
-            self.sh = 1 * (self.h / 600)
-        elif self.mode == 2:
-            self.sx = 300
-            self.sy = .5
-            self.sw = 1 * (self.w / 1)
-            self.sh = 1 * (self.h / 600)
-        self.render()
 
     def cobtoggle(self, button):
         """
@@ -193,13 +179,13 @@ class LogisticScreen(pyg.screen.GraphScreen):
             self.add_line(lx1, ly1, lx2, ly2, color=(0, 0, 255))
             # draw dots
             y = self.get_val('startx')
-            for n in range(int(self.sx + self.sw / 2)):
+            for n in range(int(self.max_gx)):
                 px, py = self.on_screen(n, y)
                 self.add_point(px, py)
                 y = get_next(self.get_val('a'), y)
 
         end = time.clock()
-        print('render time: ' + str((end - start) * 1000) + ' ms')
+        #print('render time: ' + str((end - start) * 1000) + ' ms')
         self.flush()
 
     def resize(self, width, height):
@@ -218,55 +204,55 @@ class LogisticWindow(pyg.window.Window):
         Sets values and objects of the window
         """
         # values
-        self.valset.add_value('sz', .5)
-        self.valset.add_value('a', 1)
-        self.valset.add_value('startx', .802)
-        self.valset.add_value('bif-trans', 1000)
-        self.valset.add_value('bif-iter', 200)
-        self.valset.add_value('cob-trans', 0)
-        self.valset.add_value('cob-iter', 25)
-        self.valset.add_value('cob-tail', 25)
+        self.valset.add_float_value('sz', .5, limit='ul', inclusive='', low=0, high=1)
+        self.valset.add_float_value('a', 1, limit='ul', low=0, high=4)
+        self.valset.add_float_value('startx', .802, limit='ul', low=0, high=1)
+        self.valset.add_int_value('bif-trans', 1000)
+        self.valset.add_int_value('bif-iter', 200)
+        self.valset.add_int_value('cob-trans', 0)
+        self.valset.add_int_value('cob-iter', 25)
+        self.valset.add_int_value('cob-tail', 25)
 
         # screens
-        self.add_screen('main', (LogisticScreen(0, 200, 600, 600, valset=self.valset)))
+        self.add_screen('main', (LogisticScreen(0, 200, 600, 600, self.valset, self.get_valobj('sz'))))
 
         # fields
-        self.add_float_field('zoomfield', 30, 60, 100, 15, 'Zoom', self.valset.get_obj('sz'), limit='ul', inclusive='', low=0, high=1)
-        self.add_float_field('a', 260, 155, 100, 15, 'A', self.valset.get_obj('a'), limit='ul', low=0, high=4)
-        self.add_float_field('startx', 260, 135, 100, 15, 'Xo', self.valset.get_obj('startx'), limit='ul', low=0, high=1)
-        self.add_int_field('bif-trans', 445, 155, 100, 15, 'Bif Trans', self.valset.get_obj('bif-trans'))
-        self.add_int_field('bif-iter', 445, 135, 100, 15, 'Bif Iter', self.valset.get_obj('bif-iter'))
-        self.add_int_field('cob-trans', 445, 105, 100, 15, 'Cob Trans', self.valset.get_obj('cob-trans'))
-        self.add_int_field('cob-iter', 445, 85, 100, 15, 'Cob Iter', self.valset.get_obj('cob-iter'))
-        self.add_int_field('cob-tail', 445, 65, 100, 15, 'Cob Tail', self.valset.get_obj('cob-tail'))
+        self.add_float_field('zoomfield', 30, 60, 100, 15, 'Zoom', self.get_valobj('sz'))
+        self.add_float_field('a', 260, 155, 100, 15, 'A', self.get_valobj('a'))
+        self.add_float_field('startx', 260, 135, 100, 15, 'Xo', self.get_valobj('startx'))
+        self.add_int_field('bif-trans', 445, 155, 100, 15, 'Bif Trans', self.get_valobj('bif-trans'))
+        self.add_int_field('bif-iter', 445, 135, 100, 15, 'Bif Iter', self.get_valobj('bif-iter'))
+        self.add_int_field('cob-trans', 445, 105, 100, 15, 'Cob Trans', self.get_valobj('cob-trans'))
+        self.add_int_field('cob-iter', 445, 85, 100, 15, 'Cob Iter', self.get_valobj('cob-iter'))
+        self.add_int_field('cob-tail', 445, 65, 100, 15, 'Cob Tail', self.get_valobj('cob-tail'))
 
         # buttons
         self.add_button('upb', 75, 145, 40, 40, 'Up', self.screens['main'].up)
         self.add_button('downb', 75, 100, 40, 40, 'Down', self.screens['main'].down)
         self.add_button('leftb', 30, 120, 40, 40, 'Left', self.screens['main'].left)
         self.add_button('rightb', 120, 120, 40, 40, 'Right', self.screens['main'].right)
-        self.add_button('resetb', 190, 120, 40, 40, 'Reset', self.screens['main'].reset)
+        self.add_button('resetb', 190, 120, 40, 40, 'Reset', self.screens['main'].reset_screen)
         self.add_button('m1b', 370, 130, 65, 40, 'Bifurcation', lambda: self.screens['main'].set_mode(0, self.buttons))
         self.add_button('m2b', 370, 80, 65, 40, 'Cobweb', lambda: self.screens['main'].set_mode(1, self.buttons))
         self.add_button('m3b', 370, 30, 65, 40, 'Time Series', lambda: self.screens['main'].set_mode(2, self.buttons))
         self.add_button('runcob', 320, 80, 40, 40, 'Run', lambda: self.screens['main'].cobtoggle(self.buttons['runcob']))
 
         # labels
-        self.add_label('leftlabel', 10, 180, '%.5f' % (self.screens['main'].sx - self.screens['main'].sw / 2), color=(255, 0, 255))
-        self.add_label('rightlabel', self.screens['main'].w - 60, 180, '%.5f' % (self.screens['main'].sx + self.screens['main'].sw / 2), color=(255, 0, 255))
-        self.add_label('toplabel', 10, self.screens['main'].h + 180, '%.5f' % (self.screens['main'].sy + self.screens['main'].sh / 2), color=(255, 0, 255))
-        self.add_label('bottomlabel', 10, 210, '%.5f' % (self.screens['main'].sy - self.screens['main'].sh / 2), color=(255, 0, 255))
+        self.add_label('leftlabel', 10, 180, '%.5f' % self.get_screen('main').min_gx, color=(255, 0, 255))
+        self.add_label('rightlabel', self.screens['main'].w - 60, 180, '%.5f' % self.get_screen('main').max_gx, color=(255, 0, 255))
+        self.add_label('toplabel', 10, self.screens['main'].h + 180, '%.5f' % self.get_screen('main').max_gy, color=(255, 0, 255))
+        self.add_label('bottomlabel', 10, 210, '%.5f' % self.get_screen('main').min_gy, color=(255, 0, 255))
 
     def update_labels(self):
         """
         Updates the labels
         """
-        self.labels['leftlabel'].set_text('%.5f' % (self.screens['main'].sx - self.screens['main'].sw / 2))
-        self.labels['rightlabel'].set_text('%.5f' % (self.screens['main'].sx + self.screens['main'].sw / 2))
+        self.labels['leftlabel'].set_text('%.5f' % self.get_screen('main').min_gx)
+        self.labels['rightlabel'].set_text('%.5f' % self.get_screen('main').max_gx)
         self.labels['rightlabel'].set_pos(self.screens['main'].w - 60, 180)
-        self.labels['toplabel'].set_text('%.5f' % (self.screens['main'].sy + self.screens['main'].sh / 2))
+        self.labels['toplabel'].set_text('%.5f' % self.get_screen('main').max_gy)
         self.labels['toplabel'].set_pos(10, self.screens['main'].h + 180)
-        self.labels['bottomlabel'].set_text('%.5f' % (self.screens['main'].sy - self.screens['main'].sh / 2))
+        self.labels['bottomlabel'].set_text('%.5f' % self.get_screen('main').min_gy)
 
 
 window = LogisticWindow(width=600, height=800, caption='Logistics Graph', bg=(0, 0, 0, 1), resizable=True)
