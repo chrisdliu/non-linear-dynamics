@@ -1,6 +1,6 @@
 import pyglet.gl as gl
 import pyglet.graphics as graphics
-import pyglet.window as win
+import pyglet.window as window_
 
 
 class ScreenGroup(graphics.OrderedGroup):
@@ -31,6 +31,23 @@ class ScreenGroup(graphics.OrderedGroup):
             gl.glDisable(gl.GL_SCISSOR_TEST)
         gl.glPopAttrib()
         gl.glTranslatef(-(self.x + self.offsx + .5), -(self.y + self.offsy + .5), 0)
+
+
+class Screen3DGroup(ScreenGroup):
+    def __init__(self, x, y, w, h, order, offsx=0, offsy=0, parent=None):
+        super().__init__(x, y, w, h, order, offsx, offsy, parent)
+        self.ww = 1
+        self.wh = 1
+
+    def set_win_size(self, ww, wh):
+        self.ww = ww
+        self.wh = wh
+
+    def set_state(self):
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glLoadIdentity()
+        gl.gluPerspective(70, self.ww / self.wh, .05, 100)
+        super().set_state()
 
 
 class Screen:
@@ -160,15 +177,15 @@ class Screen:
         self._vertexes['line_strip'] = lines
         self._colors['line_strip'] = colors
 
-    def add_triangle(self, x1, y1, x2, y2, x3, y3, z=0, color=(0, 0, 0), uniform=True, colors=((0,) * 9)):
-        self._vertexes['triangles'].extend((x1, y1, z, x2, y2, z, x3, y3, z))
+    def add_triangle(self, x1, y1, x2, y2, x3, y3, color=(0, 0, 0), uniform=True, colors=((0,) * 9)):
+        self._vertexes['triangles'].extend((x1, y1, x2, y2, x3, y3))
         if uniform:
             self._colors['triangles'].extend(color * 3)
         else:
             self._colors['triangles'].extend(colors)
 
-    def add_quad(self, x1, y1, x2, y2, x3, y3, x4, y4, z=0, color=(0, 0, 0), uniform=True, colors=((0,) * 12)):
-        self._vertexes['quads'].extend((x1, y1, z, x2, y2, z, x3, y3, z, x4, y4, z))
+    def add_quad(self, x1, y1, x2, y2, x3, y3, x4, y4, color=(0, 0, 0), uniform=True, colors=((0,) * 12)):
+        self._vertexes['quads'].extend((x1, y1, x2, y2, x3, y3, x4, y4))
         if uniform:
             self._colors['quads'].extend(color * 4)
         else:
@@ -198,9 +215,9 @@ class Screen:
             elif vtype == 'line_strip':
                 vlist = self.batch.add(len(self._vertexes[vtype]) // 2, gl.GL_LINE_STRIP, self._group, ('v2f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
             elif vtype == 'triangles':
-                vlist = self.batch.add(len(self._vertexes[vtype]) // 3, gl.GL_TRIANGLES, self._group, ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+                vlist = self.batch.add(len(self._vertexes[vtype]) // 2, gl.GL_TRIANGLES, self._group, ('v2f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
             elif vtype == 'quads':
-                vlist = self.batch.add(len(self._vertexes[vtype]) // 3, gl.GL_QUADS, self._group, ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+                vlist = self.batch.add(len(self._vertexes[vtype]) // 2, gl.GL_QUADS, self._group, ('v2f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
             self._vertex_lists[vtype] = vlist
 
         self.clear_buffer()
@@ -434,13 +451,13 @@ class GraphScreen(Screen):
             self._bg_group.offsy = -self.offsy
 
     def mouse_down(self, x, y, button, modifier):
-        if button == win.mouse.MIDDLE:
+        if button == window_.mouse.MIDDLE:
             self.drag = True
             self.mdownx = x
             self.mdowny = y
 
     def mouse_up(self, x, y, button, modifiers):
-        if button == win.mouse.LEFT:
+        if button == window_.mouse.LEFT:
             self.gx = self.gx - self.gw / 2 + x * self.gw / self.w
             self.gy = self.gy - self.gh / 2 + y * self.gh / self.h
             self.gw *= self.zoom_valobj.value
@@ -448,7 +465,7 @@ class GraphScreen(Screen):
             self.set_graph_minmax()
             self.total_zoom *= (1 / self.zoom_valobj.value) ** 2
             #print('zoomed to %.5f,%.5f with size %.9f,%.9f' % (self.gx, self.gy, self.gw, self.gh))
-        elif button == win.mouse.RIGHT:
+        elif button == window_.mouse.RIGHT:
             self.gx = self.gx - self.gw / 2 + x * self.gw / self.w
             self.gy = self.gy - self.gh / 2 + y * self.gh / self.h
             self.gw /= self.zoom_valobj.value
@@ -456,7 +473,7 @@ class GraphScreen(Screen):
             self.set_graph_minmax()
             self.total_zoom /= (1 / self.zoom_valobj.value) ** 2
             #print('zoomed to %.5f,%.5f with size %.9f,%.9f' % (self.gx, self.gy, self.gw, self.gh))
-        elif button == win.mouse.MIDDLE:
+        elif button == window_.mouse.MIDDLE:
             self.drag = False
             msx1, msy1 = self.on_plot(self.mdownx, self.mdowny)
             msx2, msy2 = self.on_plot(x, y)
@@ -470,11 +487,70 @@ class GraphScreen(Screen):
         self.render()
 
     def key_down(self, symbol, modifiers):
-        if symbol == win.key.LEFT:
+        if symbol == window_.key.LEFT:
             self.left()
-        elif symbol == win.key.RIGHT:
+        elif symbol == window_.key.RIGHT:
             self.right()
-        elif symbol == win.key.UP:
+        elif symbol == window_.key.UP:
             self.up()
-        elif symbol == win.key.DOWN:
+        elif symbol == window_.key.DOWN:
             self.down()
+
+
+class Screen3D(Screen):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._group = Screen3DGroup(self.x, self.y, self.w, self.h, 0)
+
+    def on_resize(self, width, height):
+        self._group.set_win_size(width, height)
+
+    def add_triangle(self, x1, y1, x2, y2, x3, y3, z=0, color=(0, 0, 0), uniform=True, colors=((0,) * 9)):
+        self._vertexes['triangles'].extend((x1, y1, z, x2, y2, z, x3, y3, z))
+        if uniform:
+            self._colors['triangles'].extend(color * 3)
+        else:
+            self._colors['triangles'].extend(colors)
+
+    def add_quad(self, x1, y1, x2, y2, x3, y3, x4, y4, z=0, color=(0, 0, 0), uniform=True, colors=((0,) * 12)):
+        self._vertexes['quads'].extend((x1, y1, z, x2, y2, z, x3, y3, z, x4, y4, z))
+        if uniform:
+            self._colors['quads'].extend(color * 4)
+        else:
+            self._colors['quads'].extend(colors)
+
+    def flush(self):
+        """
+        Deletes the current vertex lists
+        If the screen is visible, adds the vertexes in the buffer to the batch
+        Clears the buffer
+        """
+        if not self._vertex_lists['bg']:
+            self._vertex_lists['bg'] = self.batch.add(4, gl.GL_QUADS, self._bg_group,
+                                                      ('v2f', (0, 0, 0, self.h, self.w, self.h, self.w, 0)),
+                                                      ('c3B', self.bg * 4))
+        for vtype in self._vertex_types:
+            if self._vertex_lists[vtype]:
+                self._vertex_lists[vtype].delete()
+                self._vertex_lists[vtype] = None
+            vlist = None
+            if not self.visible:
+                continue
+            if vtype == 'points':
+                vlist = self.batch.add(len(self._vertexes[vtype]) // 3, gl.GL_POINTS, self._group,
+                                       ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+            elif vtype == 'lines':
+                vlist = self.batch.add(len(self._vertexes[vtype]) // 3, gl.GL_LINES, self._group,
+                                       ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+            elif vtype == 'line_strip':
+                vlist = self.batch.add(len(self._vertexes[vtype]) // 2, gl.GL_LINE_STRIP, self._group,
+                                       ('v2f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+            elif vtype == 'triangles':
+                vlist = self.batch.add(len(self._vertexes[vtype]) // 3, gl.GL_TRIANGLES, self._group,
+                                       ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+            elif vtype == 'quads':
+                vlist = self.batch.add(len(self._vertexes[vtype]) // 3, gl.GL_QUADS, self._group,
+                                       ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+            self._vertex_lists[vtype] = vlist
+
+        self.clear_buffer()
