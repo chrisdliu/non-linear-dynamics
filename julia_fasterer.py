@@ -161,10 +161,10 @@ def compress(p_colors, w, h):
 
 
 class JuliaScreen(pyg.screen.GraphScreen):
-    def __init__(self, x, y, width, height, bg=(255, 255, 255), valset=None, visible=True):
+    def __init__(self, x, y, width, height, valset, zoom_valobj, bg=(255, 255, 255), ):
         self.mode = 0
         self.mouse_c = False
-        super().__init__(x, y, width, height, 0, 0, 5, 5, bg=bg, valset=valset, visible=visible)
+        super().__init__(x, y, width, height, 0, 0, 5, 5, valset, zoom_valobj, bg=bg)
 
     def set_mode(self, mode):
         self.mode = mode
@@ -207,22 +207,22 @@ class JuliaScreen(pyg.screen.GraphScreen):
             self.set_val('c', cx + cy * 1j)
 
 
-class JuliaWindow(pyg._window.Window):
+class JuliaWindow(pyg.window.Window):
     def set_vars(self):
-        self.valset.add_num_value('sz', .5)
-        self.valset.add_num_value('max_iter', 25)
-        self.valset.add_num_value('limit', 2.0)
-        self.valset.add_num_value('c', -.77 + .22j)
-        self.valset.add_num_value('cmpr', 0.0)
-        self.valset.add_num_value('calctime', 0.0)
-        self.valset.add_num_value('flushtime', 0.0)
+        self.valset.add_float_value('sz', .5, limit='ul', inclusive='', low=0, high=1)
+        self.valset.add_int_value('max_iter', 25, limit='l', low=1)
+        self.valset.add_float_value('limit', 2.0, limit='l', inclusive='', low=0)
+        self.valset.add_complex_value('c', -.77 + .22j)
+        self.valset.add_float_value('cmpr', 0.0)
+        self.valset.add_float_value('calctime', 0.0)
+        self.valset.add_float_value('flushtime', 0.0)
 
-        main = JuliaScreen(0, 200, 500, 500, valset=self.valset)
+        main = JuliaScreen(0, 200, 500, 500, self.valset, self.get_valobj('sz'))
         self.add_screen('main', main)
 
-        self.add_float_field('zoomfield', 230, 55, 100, 15, 'Zoom', self.get_valobj('sz'), limit='ul', inclusive='', low=0, high=1)
-        self.add_int_field('max_iter', 230, 155, 100, 15, 'Max Iter', self.get_valobj('max_iter'), limit='l', low=1)
-        self.add_float_field('limit', 230, 135, 100, 15, 'Limit', self.get_valobj('limit'), limit='l', inclusive='', low=0)
+        self.add_float_field('zoomfield', 230, 55, 100, 15, 'Zoom', self.get_valobj('sz'))
+        self.add_int_field('max_iter', 230, 155, 100, 15, 'Max Iter', self.get_valobj('max_iter'))
+        self.add_float_field('limit', 230, 135, 100, 15, 'Limit', self.get_valobj('limit'))
         self.add_complex_field('c', 230, 75, 100, 15, 'C', self.get_valobj('c'))
 
         self.add_button('resetb', 150, 120, 40, 40, 'Reset', self.reset)
@@ -232,10 +232,10 @@ class JuliaWindow(pyg._window.Window):
         self.add_button('m3b', 50, 70, 80, 20, 'Julia z^3+c', lambda: self.set_mode(2))
         self.add_button('m4b', 50, 40, 80, 20, 'Julia c*sin(z)', lambda: self.set_mode(3))
 
-        self.add_label('leftlabel', 10, 180, '%.5f' % (self.screens['main'].sx - self.screens['main'].sw / 2), color=(255, 0, 255))
-        self.add_label('rightlabel', self.width- 60, 180, '%.5f' % (self.screens['main'].sx + self.screens['main'].sw / 2), color=(255, 0, 255))
-        self.add_label('toplabel', 10, self.height + 180, '%.5f' % (self.screens['main'].sy + self.screens['main'].sh / 2), color=(255, 0, 255))
-        self.add_label('bottomlabel', 10, 210, '%.5f' % (self.screens['main'].sy - self.screens['main'].sh / 2), color=(255, 0, 255))
+        self.add_label('leftlabel', 10, 180, color=(255, 0, 255))
+        self.add_label('rightlabel', self.width - 60, 180, color=(255, 0, 255))
+        self.add_label('toplabel', 10, self.height + 180, color=(255, 0, 255))
+        self.add_label('bottomlabel', 10, 210, color=(255, 0, 255))
         self.add_label('cmprlabel', self.width - 160, 130, 'compression: %.5f' % self.valset.get_val('cmpr'))
         self.add_label('calclabel', self.width - 160, 110, '  calc time: %.5f' % self.valset.get_val('calctime'))
         self.add_label('flushlabel', self.width - 160, 90, ' flush time: %.5f' % self.valset.get_val('flushtime'))
@@ -253,12 +253,12 @@ class JuliaWindow(pyg._window.Window):
         self.render()
 
     def update_labels(self):
-        self.labels['leftlabel'].set_text('%.5f' % (self.screens['main'].sx - self.screens['main'].sw / 2))
-        self.labels['rightlabel'].set_text('%.5f' % (self.screens['main'].sx + self.screens['main'].sw / 2))
+        self.labels['leftlabel'].set_text('%.5f' % self.get_screen('main').min_gx)
+        self.labels['rightlabel'].set_text('%.5f' % self.get_screen('main').max_gx)
         self.labels['rightlabel'].set_pos(self.width - 60, 180)
-        self.labels['toplabel'].set_text('%.5f' % (self.screens['main'].sy + self.screens['main'].sh / 2))
+        self.labels['toplabel'].set_text('%.5f' % self.get_screen('main').max_gy)
         self.labels['toplabel'].set_pos(10, self.height + 180)
-        self.labels['bottomlabel'].set_text('%.5f' % (self.screens['main'].sy - self.screens['main'].sh / 2))
+        self.labels['bottomlabel'].set_text('%.5f' % self.get_screen('main').min_gy)
         self.labels['cmprlabel'].set_text('compression: %.5f %%' % self.valset.get_val('cmpr'))
         self.labels['cmprlabel'].set_pos(self.width- 160, 130)
         self.labels['calclabel'].set_text('  calc time: %.5f ms' % self.valset.get_val('calctime'))
