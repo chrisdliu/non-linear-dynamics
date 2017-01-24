@@ -1,7 +1,7 @@
 import pyglet
 import pyglet.gl as gl
 import pyglet.graphics as graphics
-import pyglet.window as win
+import pyglet.window as window_
 
 from .valset import *
 
@@ -17,6 +17,7 @@ class GuiObj:
         self.visible = visible
         self.active = active
         self.is_focus = False
+        self.is_hover = False
         self._vertex_lists = []
 
     def on(self):
@@ -54,9 +55,21 @@ class GuiObj:
         self.is_focus = False
         self.render()
 
+    def hover_on(self):
+        self.is_hover = True
+        self.render()
+
+    def hover_off(self):
+        self.is_hover = False
+        self.render()
+
     def set_pos(self, x, y):
         self.x = x
         self.y = y
+
+    def set_size(self, w, h):
+        self.w = w
+        self.h = h
 
     def render(self):
         pass
@@ -97,15 +110,16 @@ class Box(GuiObj):
         super().__init__(x, y, w, h, batch)
         self.color = color
 
-    def set_color(self, color):
-        self.color = color
+    def set_color(self, r, g, b):
+        self.color = (r, g, b)
         self.render()
 
     def render(self):
         self._clear()
-        self.add_vlist(self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
-            ('v2f', (self.x, self.y, self.x + self.w, self.y, self.x + self.w, self.y + self.h, self.x, self.y + self.h)),
-            ('c3B', self.color * 4))))
+        self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
+                                       ('v2f', (self.x, self.y, self.x + self.w, self.y,
+                                                self.x + self.w, self.y + self.h, self.x, self.y + self.h)),
+                                       ('c3B', self.color * 4)))
 
 
 class Field(GuiObj):
@@ -116,10 +130,15 @@ class Field(GuiObj):
         self.name = name
         self.valobj = valobj
         self.input = ''
+        self.input_accepted = False
+        self.input_valid = False
         self._label = Label(x, y, self.get_label_text(), batch)
+        self._box = Box(x, y, w, h, batch, color=(90, 90, 90))
 
     def enter(self):
         self.input = ''
+        self.input_accepted = False
+        self.input_valid = False
         super().enter()
 
     def exit(self):
@@ -132,16 +151,18 @@ class Field(GuiObj):
         self._label.set_pos(x, y)
 
     def key_down(self, symbol, modifiers):
-        if symbol == win.key.ENTER:
+        if symbol == window_.key.ENTER:
             self.exit()
-        elif symbol == win.key.BACKSPACE:
+        elif symbol == window_.key.BACKSPACE:
             if len(self.input) > 0:
                 self.input = self.input[:-1]
+                self.update_color()
         self.update_label()
-    
+
     def text_input(self, text):
         if text in self.accepted:
             self.input += text
+            self.update_color()
         self.update_label()
 
     def get_label_text(self):
@@ -153,20 +174,37 @@ class Field(GuiObj):
     def update_label(self):
         self._label.set_text(self.get_label_text())
 
+    def update_color(self):
+        parsed = self.valobj.parse(self.input)
+        if parsed is not None:
+            self.input_accepted = True
+            if self.valobj.is_valid(parsed):
+                self.input_valid = True
+            else:
+                self.input_valid = False
+        else:
+            self.input_accepted = False
+            self.input_valid = False
+        self.render()
+
     def render(self):
         self._clear()
         self.update_label()
         if self.is_focus:
-            self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
-                ('v2f', (self.x, self.y, self.x + self.w, self.y, self.x + self.w, self.y + self.h, self.x, self.y + self.h)),
-                ('c3B', (150, 150, 150) * 4)))
+            if self.input_valid:
+                self._box.set_color(80, 150, 80)
+            elif self.input_accepted:
+                self._box.set_color(80, 80, 150)
+            else:
+                self._box.set_color(150, 50, 50)
+        elif self.is_hover:
+            self._box.set_color(120, 120, 120)
         else:
-            self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
-                ('v2f', (self.x, self.y, self.x + self.w, self.y, self.x + self.w, self.y + self.h, self.x, self.y + self.h)),
-                ('c3B', (100, 100, 100) * 4)))
+            self._box.set_color(90, 90, 90)
+        self._box.render()
 
 
-class NumField(Field):
+class NumberField(Field):
     accepted = [
         '0',
         '1',
@@ -183,21 +221,21 @@ class NumField(Field):
     ]
 
 
-class FloatField(NumField):
+class FloatField(NumberField):
     def __init__(self, x, y, w, h, name, valobj, batch):
         if type(valobj) is not FloatValue:
             raise TypeError('Value object is not a FloatValue!')
         super().__init__(x, y, w, h, name, valobj, batch)
 
 
-class IntField(NumField):
+class IntField(NumberField):
     def __init__(self, x, y, w, h, name, valobj, batch):
         if type(valobj) is not IntValue:
             raise TypeError('Value object is not a IntValue!')
         super().__init__(x, y, w, h, name, valobj, batch)
 
 
-class ComplexField(NumField):
+class ComplexField(NumberField):
     accepted = [
         '0',
         '1',
@@ -223,10 +261,11 @@ class ComplexField(NumField):
 
 class Button(GuiObj):
     def __init__(self, x, y, w, h, text, batch, action=None):
-        super().__init__(x, y, w, h, batch)
+        super().__init__(x, y, w, h, batch, True)
         self.action = action
         self._text = text
         self._label = Label(x, y, text, batch)
+        self._box = Box(x, y, w, h, batch, color=(90, 90, 90))
 
     def set_pos(self, x, y):
         super().set_pos(x, y)
@@ -250,9 +289,13 @@ class Button(GuiObj):
 
     def render(self):
         self._clear()
-        self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
-              ('v2f', (self.x, self.y, self.x + self.w, self.y, self.x + self.w, self.y + self.h, self.x, self.y + self.h)),
-              ('c3B', (100, 100, 100) * 4)))
+        if self.is_focus:
+            self._box.set_color(150, 150, 150)
+        elif self.is_hover:
+            self._box.set_color(120, 120, 120)
+        else:
+            self._box.set_color(90, 90, 90)
+        self._box.render()
 
 
 class ToggleButton(Button):
@@ -271,13 +314,20 @@ class ToggleButton(Button):
     def render(self):
         self._clear()
         if self.boolval.value:
-            self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
-                  ('v2f', (self.x, self.y, self.x + self.w, self.y, self.x + self.w, self.y + self.h, self.x, self.y + self.h)),
-                  ('c3B', (150, 150, 150) * 4)))
+            if self.is_focus:
+                self._box.set_color(50, 150, 50)
+            elif self.is_hover:
+                self._box.set_color(30, 120, 30)
+            else:
+                self._box.set_color(10, 90, 10)
         else:
-            self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
-                  ('v2f', (self.x, self.y, self.x + self.w, self.y, self.x + self.w, self.y + self.h, self.x, self.y + self.h)),
-                  ('c3B', (100, 100, 100) * 4)))
+            if self.is_focus:
+                self._box.set_color(150, 50, 50)
+            elif self.is_hover:
+                self._box.set_color(120, 30, 30)
+            else:
+                self._box.set_color(90, 10, 10)
+        self._box.render()
 
 
 class Slider(GuiObj):
@@ -290,6 +340,8 @@ class Slider(GuiObj):
         self.high = high
         self._slider_pos = (valobj.value - low) / (high - low)
         self._label = Label(x, y, self.get_label_text(), batch)
+        self._box = Box(x, y, w, h, batch, color=(90, 90, 90))
+        self._bar = Box(x + self._slider_pos * w + offs, y, 2, h, batch, color=(240, 0, 240))
 
     def update_pos(self):
         self._slider_pos = (self.valobj.value - self.low) / (self.high - self.low)
@@ -305,21 +357,14 @@ class Slider(GuiObj):
     def render(self):
         self._clear()
         if self.is_focus:
-            self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
-                ('v2f', (self.x, self.y, self.x + self.w + self.offs, self.y,
-                         self.x + self.w + self.offs, self.y + self.h, self.x, self.y + self.h)),
-                ('c3B', (150, 150, 150) * 4)))
+            self._box.set_color(150, 150, 150)
+        elif self.is_hover:
+            self._box.set_color(120, 120, 120)
         else:
-            self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
-                ('v2f', (self.x, self.y, self.x + self.w + self.offs, self.y,
-                         self.x + self.w + self.offs, self.y + self.h, self.x, self.y + self.h)),
-                ('c3B', (100, 100, 100) * 4)))
-        self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(1),
-            ('v2f', (self.x + self._slider_pos * self.w + self.offs, self.y,
-                     self.x + self._slider_pos * self.w + 2 + self.offs, self.y,
-                     self.x + self._slider_pos * self.w + 2 + self.offs, self.y + self.h,
-                     self.x + self._slider_pos * self.w + self.offs, self.y + self.h)),
-            ('c3B', (240, 0, 240) * 4)))
+            self._box.set_color(90, 90, 90)
+        self._box.render()
+        self._bar.set_pos(self.x + self._slider_pos * self.w + self.offs, self.y)
+        self._bar.render()
 
     def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         self._slider_pos = (x - self.offs) / self.w

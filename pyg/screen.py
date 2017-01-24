@@ -63,7 +63,7 @@ class Screen:
 
     def set_visible(self, visible):
         """
-        Sets screen visible
+        Sets screen.visible
         if True, renders the screen
         if False, deletes the screen's vertex lists
         :param visible: screen visible
@@ -79,21 +79,21 @@ class Screen:
 
     def set_active(self, active):
         """
-        Sets screen active
+        Sets screen.active
         :param active: screen active
         """
         self.active = active
 
     def on(self):
         """
-        Sets screen active and visible to True
+        Calls set_visible and set_active with True
         """
         self.set_active(True)
         self.set_visible(True)
 
     def off(self):
         """
-        Sets screen active and visible to False
+        Calls set_visible and set_active with False
         """
         self.set_active(False)
         self.set_visible(False)
@@ -206,6 +206,9 @@ class Screen:
         self.clear_buffer()
 
     def clear_buffer(self):
+        """
+        Clears the buffer arrays
+        """
         for vtype in self._vertex_types:
             self._vertexes[vtype] = []
             self._colors[vtype] = []
@@ -288,6 +291,9 @@ class GraphScreen(Screen):
         self.offsy = 0
 
     def set_graph_minmax(self):
+        """
+        Sets the min/max x and y coordinates on the graph
+        """
         self.min_gx = self.gx - self.gw / 2
         self.max_gx = self.gx + self.gw / 2
         self.min_gy = self.gy - self.gh / 2
@@ -338,13 +344,14 @@ class GraphScreen(Screen):
         self.gw = self._ogw / sqrt_z
         self.gh = self.gw * self.h / self.w
 
-    def resize(self, width, height):
+    def resize(self, new_width, new_height):
         """
-        Resizes the screen based on the window's width and height
-        :param width: window width
-        :param height: window height
+        Resizes the screen based on the window's new width and height
+        Should be overritten if screen does not take up entire window
+        :param width: new window width
+        :param height: new window height
         """
-        self.refit(width, height)
+        self.refit(new_width, new_height)
 
     def refit(self, new_width, new_height):
         """

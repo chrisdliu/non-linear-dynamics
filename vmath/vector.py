@@ -6,7 +6,7 @@ class Vector:
         for x in args:
             if not isinstance(x, numbers.Number):
                 raise TypeError('All arguments must be numbers!')
-        self._x = args
+        self._x = list(args)
         self.dim = len(args)
 
     def __add__(self, other):
@@ -107,6 +107,13 @@ class Vector:
         if item < 0 or item >= self.dim:
             raise IndexError
         return self._x[item]
+
+    def __setitem__(self, key, value):
+        if key < 0 or key >= self.dim:
+            raise IndexError
+        if not isinstance(value, numbers.Number):
+            raise ArithmeticError('Value must be a number!')
+        self._x[key] = value
 
     def __iter__(self):
         self.n = 0

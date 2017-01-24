@@ -698,5 +698,4 @@ class JuliaWindow(pyg.window.Window):
                     self.saved_coords_delete()
 
 
-window = JuliaWindow(width=500, height=700, caption='Julia Graph', bg=(0, 0, 0, 1), resizable=True)
-pyglet.app.run()
+pyg.run(JuliaWindow, caption='Julia Graph')

@@ -46,7 +46,7 @@ class JuliaScreen(pyg.screen.GraphScreen):
         self.refit(width, height - 200)
 
 
-class JuliaWindow(pyg.window.Window):
+class JuliaWindow(pyg._window.Window):
     def set_vars(self):
         self.valset.add_value('sz', .5)
         self.valset.add_value('qual', 10)

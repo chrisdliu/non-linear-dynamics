@@ -198,7 +198,7 @@ class LogisticScreen(pyg.screen.GraphScreen):
 
 
 
-class LogisticWindow(pyg.window.Window):
+class LogisticWindow(pyg._window.Window):
     def set_vars(self):
         """
         Sets values and objects of the window

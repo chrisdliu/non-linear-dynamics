@@ -54,7 +54,7 @@ class ComplexScreen(pyg.screen.GraphScreen):
         self.refit(width, height - 200)
 
 
-class ComplexWindow(pyg.window.Window):
+class ComplexWindow(pyg._window.Window):
     def set_vars(self):
         self.valset.add_value('sz', .5)
         self.valset.add_value('n', 0)

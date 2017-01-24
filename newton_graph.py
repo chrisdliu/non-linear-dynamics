@@ -231,7 +231,7 @@ class NewtonScreen(pyg.screen.GraphScreen):
         self.refit(width, height - 200)
 
 
-class NewtonWindow(pyg.window.Window):
+class NewtonWindow(pyg._window.Window):
     def set_vars(self):
         """
         Adds the gui components

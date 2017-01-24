@@ -105,7 +105,7 @@ def get_length_text(length):
         return '%.5f AUs' % (length / 150000000000)
 
 
-class koch_window(pyg.window.Window):
+class koch_window(pyg._window.Window):
     def set_vars(self):
         #ds = (log 4) / (log 2 + log (1 + cos(theta)))
         self.valset.add_float_value('gz', .5, limit='ul', inclusive='', low=0, high=1)

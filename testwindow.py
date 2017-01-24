@@ -35,7 +35,7 @@ class TestScreen(pyg.screen.Screen):
         self.img1.blit(50, 50)
 
 
-class TestWindow(pyg.window.Window):
+class TestWindow(pyg._window.Window):
     def set_vars(self):
         #self.valset.add_value('val', 1)
         self.add_screen('main', (TestScreen(0, 200, 600, 600, self.valset, bg=(255, 255, 255))))

@@ -178,7 +178,7 @@ class JuliaScreen(pyg.screen.GraphScreen):
             self.set_val('c', cx + cy * 1j)
 
 
-class JuliaWindow(pyg.window.Window):
+class JuliaWindow(pyg._window.Window):
     def set_vars(self):
         self.valset.add_float_value('sz', .5, limit='ul', inclusive='', low=0, high=1)
         self.valset.add_int_value('max_iter', 25, limit='l', low=1)

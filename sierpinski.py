@@ -20,10 +20,10 @@ class SierpScreen(pyg.screen.GraphScreen):
         self.refit(width, height - 200)
 
 
-class SierpWindow(pyg.window.Window):
+class SierpWindow(pyg._window.Window):
     def set_vars(self):
         self.valset.add_int_value('iter', 5000, limit='ul', low=1, high=100000)
-        self.valset.add_float_value('zoomratio', .5)
+        self.valset.add_float_value('zoomratio', .5, limit='ul', inclusive='')
 
         self.add_screen('main', SierpScreen(0, 200, 500, 500, 2, 2, 4, 4, self.valset, self.get_valobj('zoomratio')))
 

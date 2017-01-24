@@ -26,7 +26,7 @@ class Value(object):
         return True
 
 
-class NumValue(Value):
+class NumberValue(Value):
     def __init__(self, value, limit='', inclusive='ul', low=0, high=1):
         super().__init__(value)
         self.limit = limit
@@ -59,7 +59,7 @@ class NumValue(Value):
         return True
 
 
-class FloatValue(NumValue):
+class FloatValue(NumberValue):
     def __str__(self):
         return '%.5f' % self.value
 
@@ -70,7 +70,7 @@ class FloatValue(NumValue):
             return None
 
 
-class IntValue(NumValue):
+class IntValue(NumberValue):
     def __str__(self):
         return '%i' % self.value
 
@@ -86,7 +86,7 @@ class IntValue(NumValue):
         return super().is_valid(new_value)
 
 
-class ComplexValue(NumValue):
+class ComplexValue(NumberValue):
     def __str__(self):
         return '%.3f + %.3fj' % (self.value.real, self.value.imag)
 
@@ -134,5 +134,4 @@ class ValSet:
         return self.vals[name].value
 
     def set_val(self, name, value):
-        self.vals[name].value = value
-
+        self.vals[name].set_val(value)
