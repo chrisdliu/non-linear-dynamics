@@ -1,12 +1,14 @@
-import pyglet
-import pyglet.gl as gl
-import pyglet.graphics as graphics
-import pyglet.window as window_
+import pyglet.text as _text
+import pyglet.window as win
 
+from .screengroup import *
 from .valset import *
 
 
 class GuiObj:
+    _group_1 = graphics.OrderedGroup(1)  # boxes
+    _group_2 = graphics.OrderedGroup(2)  # labels (text)
+
     def __init__(self, x, y, w, h, batch, focusable=False, visible=True, active=True):
         self.x = x
         self.y = y
@@ -27,24 +29,6 @@ class GuiObj:
     def off(self):
         self.active = False
         self.set_visible(False)
-
-    def set_visible(self, visible):
-        if visible:
-            self.render()
-        else:
-            self._clear()
-        self.visible = visible
-
-    def is_inside(self, x, y):
-        return self.x <= x < self.x + self.w and self.y <= y < self.y + self.h
-
-    def _clear(self):
-        for vlist in self._vertex_lists:
-            vlist.delete()
-        self._vertex_lists.clear()
-
-    def add_vlist(self, vlist):
-        self._vertex_lists.append(vlist)
 
     def enter(self):
         if self.focusable:
@@ -71,6 +55,24 @@ class GuiObj:
         self.w = w
         self.h = h
 
+    def set_visible(self, visible):
+        if visible:
+            self.render()
+        else:
+            self._clear()
+        self.visible = visible
+
+    def is_inside(self, x, y):
+        return self.x <= x < self.x + self.w and self.y <= y < self.y + self.h
+
+    def add_vlist(self, vlist):
+        self._vertex_lists.append(vlist)
+
+    def _clear(self):
+        for vlist in self._vertex_lists:
+            vlist.delete()
+        self._vertex_lists.clear()
+
     def render(self):
         pass
 
@@ -93,8 +95,8 @@ class GuiObj:
 class Label(GuiObj):
     def __init__(self, x, y, text, batch, color=(255, 255, 255)):
         super().__init__(x, y, 0, 0, batch)
-        self._pyglet_label = pyglet.text.Label(text, font_name='Menlo', font_size=8, x=x, y=y, batch=batch,
-                                               group=graphics.OrderedGroup(1), color=(*color, 255))
+        self._pyglet_label = _text.Label(text, font_name='Menlo', font_size=8, x=x, y=y, batch=batch,
+                                               group=self._group_2, color=(*color, 255))
 
     def set_text(self, text):
         self._pyglet_label.text = text
@@ -116,14 +118,14 @@ class Box(GuiObj):
 
     def render(self):
         self._clear()
-        self.add_vlist(self._batch.add(4, gl.GL_QUADS, graphics.OrderedGroup(0),
+        self.add_vlist(self._batch.add(4, GL_QUADS, self._group_1,
                                        ('v2f', (self.x, self.y, self.x + self.w, self.y,
                                                 self.x + self.w, self.y + self.h, self.x, self.y + self.h)),
                                        ('c3B', self.color * 4)))
 
 
 class Field(GuiObj):
-    accepted = []
+    accepted = ()
 
     def __init__(self, x, y, w, h, name, valobj, batch):
         super().__init__(x, y, w, h, batch, True)
@@ -151,9 +153,9 @@ class Field(GuiObj):
         self._label.set_pos(x, y)
 
     def key_down(self, symbol, modifiers):
-        if symbol == window_.key.ENTER:
+        if symbol == win.key.ENTER:
             self.exit()
-        elif symbol == window_.key.BACKSPACE:
+        elif symbol == win.key.BACKSPACE:
             if len(self.input) > 0:
                 self.input = self.input[:-1]
                 self.update_color()
@@ -205,20 +207,11 @@ class Field(GuiObj):
 
 
 class NumberField(Field):
-    accepted = [
-        '0',
-        '1',
-        '2',
-        '3',
-        '4',
-        '5',
-        '6',
-        '7',
-        '8',
-        '9',
-        '.',
-        '-',
-    ]
+    accepted = (
+        '0', '1', '2', '3',
+        '4', '5', '6', '7',
+        '8', '9', '.', '-',
+    )
 
 
 class FloatField(NumberField):
@@ -236,22 +229,12 @@ class IntField(NumberField):
 
 
 class ComplexField(NumberField):
-    accepted = [
-        '0',
-        '1',
-        '2',
-        '3',
-        '4',
-        '5',
-        '6',
-        '7',
-        '8',
-        '9',
-        '.',
-        '+',
-        '-',
+    accepted = (
+        '0', '1', '2', '3',
+        '4', '5', '6', '7',
+        '8', '9', '.', '-',
         'j',
-    ]
+    )
 
     def __init__(self, x, y, w, h, name, valobj, batch):
         if type(valobj) is not ComplexValue:

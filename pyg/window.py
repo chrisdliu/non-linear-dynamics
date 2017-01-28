@@ -1,13 +1,14 @@
 import pyglet.clock as clock
 from .gui import *
+from .screengroup import *
 from .valset import *
 
 
-class Window(window_.Window):
-    def __init__(self, width=600, height=600, caption='Window', bg=(0, 0, 0, 1), *args, **kwargs):
+class Window(win.Window):
+    def __init__(self, width=600, height=600, caption='Window Caption', bg=(0, 0, 0, 1), *args, **kwargs):
         super().__init__(width=width, height=height, caption=caption, *args, **kwargs)
         self.set_minimum_size(width, height)
-        gl.glClearColor(*bg)
+        glClearColor(*bg)
 
         self._batch = graphics.Batch()
         self.screens = {}
@@ -25,6 +26,7 @@ class Window(window_.Window):
         self.update_labels()
         clock.schedule_interval(self.tick, 0.1)
 
+    # region add gui components
     def add_screen(self, name, screen):
         self.screens[name] = screen
 
@@ -48,7 +50,9 @@ class Window(window_.Window):
 
     def add_int_slider(self, name, x, y, w, h, offs, field_name, valobj, low, high):
         self.sliders[name] = IntSlider(x, y, w, h, offs, field_name, valobj, low, high, self._batch)
+    # endregion
 
+    # region get gui components
     def get_screen(self, name):
         return self.screens[name]
 
@@ -63,6 +67,20 @@ class Window(window_.Window):
 
     def get_slider(self, name):
         return self.sliders[name]
+    # endregion
+
+    # region valset functions
+    def add_int_value(self, name, value, limit='', inclusive='ul', low=0, high=1):
+        self.valset.add_int_value(name, value, limit, inclusive, low, high)
+
+    def add_float_value(self, name, value, limit='', inclusive='ul', low=0, high=1):
+        self.valset.add_float_value(name, value, limit, inclusive, low, high)
+
+    def add_complex_value(self, name, value, limit='', inclusive='ul', low=0, high=1):
+        self.valset.add_complex_value(name, value, limit, inclusive, low, high)
+
+    def add_bool_value(self, name, value):
+        self.valset.add_bool_value(name, value)
 
     def get_val(self, name):
         return self.valset.get_val(name)
@@ -72,6 +90,7 @@ class Window(window_.Window):
 
     def get_valobj(self, name):
         return self.valset.get_valobj(name)
+    # endregion
 
     def draw(self):
         self.update_labels()
@@ -79,6 +98,11 @@ class Window(window_.Window):
         for screen in self.screens.values():
             if screen.visible:
                 screen.draw()
+
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        glOrtho(0, self.width, 0, self.height, -10, 10)
+        glMatrixMode(GL_MODELVIEW)
         self._batch.draw()
 
     def render(self):
@@ -216,12 +240,10 @@ class Window(window_.Window):
                 self.focus = None
                 return
 
-        #print('click: ' + str(x) + ', ' + str(y))
-
     def key_down(self, symbol, modifiers):
         if self.focus:
             self.focus.key_down(symbol, modifiers)
-            if symbol == window_.key.ENTER:
+            if symbol == win.key.ENTER:
                 self.focus = None
                 self.render()
         else:

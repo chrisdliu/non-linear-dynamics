@@ -1,53 +1,5 @@
-import pyglet.gl as gl
-import pyglet.graphics as graphics
-import pyglet.window as window_
-
-
-class ScreenGroup(graphics.OrderedGroup):
-    def __init__(self, x, y, w, h, order, offsx=0, offsy=0, parent=None):
-        super().__init__(order, parent=parent)
-        self.x = x
-        self.y = y
-        self.w = w
-        self.h = h
-        self.offsx = offsx
-        self.offsy = offsy
-
-    def set_state(self):
-        """
-        Enables a scissor test on the region and translates the screen based on its offset
-        """
-        gl.glTranslatef(self.x + self.offsx + .5, self.y + self.offsy + .5, 0)
-        gl.glPushAttrib(gl.GL_ENABLE_BIT | gl.GL_TRANSFORM_BIT | gl.GL_CURRENT_BIT)
-        self.was_scissor_enabled = gl.glIsEnabled(gl.GL_SCISSOR_TEST)
-        gl.glEnable(gl.GL_SCISSOR_TEST)
-        gl.glScissor(int(self.x), int(self.y), int(self.w), int(self.h))
-
-    def unset_state(self):
-        """
-        Disables the scissor test and translates the screen based on its offset
-        """
-        if not self.was_scissor_enabled:
-            gl.glDisable(gl.GL_SCISSOR_TEST)
-        gl.glPopAttrib()
-        gl.glTranslatef(-(self.x + self.offsx + .5), -(self.y + self.offsy + .5), 0)
-
-
-class Screen3DGroup(ScreenGroup):
-    def __init__(self, x, y, w, h, order, offsx=0, offsy=0, parent=None):
-        super().__init__(x, y, w, h, order, offsx, offsy, parent)
-        self.ww = 1
-        self.wh = 1
-
-    def set_win_size(self, ww, wh):
-        self.ww = ww
-        self.wh = wh
-
-    def set_state(self):
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glLoadIdentity()
-        gl.gluPerspective(70, self.ww / self.wh, .05, 100)
-        super().set_state()
+from pyglet import graphics, window as win
+from pyglet.gl import *
 
 
 class Screen:
@@ -58,12 +10,13 @@ class Screen:
         self.y = y
         self.w = width
         self.h = height
+        # window width and height for glOrtho
+        self._ww = 0
+        self._wh = 0
         self.visible = visible
         self.active = active
 
-        self.batch = graphics.Batch()
-        self._group = ScreenGroup(x, y, width, height, 0)
-        self._bg_group = ScreenGroup(x, y, width, height, -1)
+        self._batch = graphics.Batch()
         self._vertex_lists = {}
         self._vertexes = {}
         self._colors = {}
@@ -78,12 +31,13 @@ class Screen:
 
         self.valset = valset
 
+    # region visible and active set functions
     def set_visible(self, visible):
         """
         Sets screen.visible
         if True, renders the screen
         if False, deletes the screen's vertex lists
-        :param visible: screen visible
+        :param visible: bool
         """
         self.visible = visible
         if visible:
@@ -97,7 +51,8 @@ class Screen:
     def set_active(self, active):
         """
         Sets screen.active
-        :param active: screen active
+        Window will call screen.tick if the screen is active
+        :param active: bool
         """
         self.active = active
 
@@ -114,7 +69,9 @@ class Screen:
         """
         self.set_active(False)
         self.set_visible(False)
+    # endregion
 
+    # region valset functions
     def get_val(self, name):
         """
         Returns a value from the valset
@@ -138,58 +95,49 @@ class Screen:
         :return: valobj
         """
         return self.valset.get_obj(name)
+    # endregion
 
-    def set_bg(self, color):
-        """
-        Sets the screen's background color
-        :param color: background color
-        """
-        self.bg = color
-        if self._vertex_lists['bg']:
-            self._vertex_lists['bg'].delete()
-            self._vertex_lists['bg'] = None
-        if self.visible:
-            self._vertex_lists['bg'] = self.batch.add(4, gl.GL_QUADS, self._bg_group,
-                                                      ('v2f', (0, 0, 0, self.h, self.w, self.h, self.w, 0)),
-                                                      ('c3B', color * 4))
-
-    def add_point(self, x, y, z=0, color=(0, 0, 0)):
-        self._vertexes['points'].extend((x, y, z))
-        self._colors['points'].extend(color)
-
-    def add_points(self, points, colors):
-        self._vertexes['points'].extend(points)
-        self._colors['points'].extend(colors)
-
-    def set_points_both(self, points, colors):
-        self._vertexes['points'] = points
+    # region vertex set functions
+    def set_points(self, vertexes, colors):
+        self._vertex_lists['points'] = vertexes
         self._colors['points'] = colors
 
-    def add_line(self, x1, y1, x2, y2, z=0, color=(0, 0, 0)):
-        self._vertexes['lines'].extend((x1, y1, z, x2, y2, z))
-        self._colors['lines'].extend(color * 2)
-
-    def set_lines_both(self, lines, colors):
-        self._vertexes['lines'] = lines
+    def set_lines(self, vertexes, colors):
+        self._vertex_lists['lines'] = vertexes
         self._colors['lines'] = colors
 
-    def set_line_strip(self, lines, colors):
-        self._vertexes['line_strip'] = lines
+    def set_line_strip(self, vertexes, colors):
+        self._vertex_lists['line_strip'] = vertexes
         self._colors['line_strip'] = colors
 
-    def add_triangle(self, x1, y1, x2, y2, x3, y3, color=(0, 0, 0), uniform=True, colors=((0,) * 9)):
-        self._vertexes['triangles'].extend((x1, y1, x2, y2, x3, y3))
-        if uniform:
-            self._colors['triangles'].extend(color * 3)
-        else:
-            self._colors['triangles'].extend(colors)
+    def set_triangles(self, vertexes, colors):
+        self._vertex_lists['triangles'] = vertexes
+        self._colors['triangles'] = colors
 
-    def add_quad(self, x1, y1, x2, y2, x3, y3, x4, y4, color=(0, 0, 0), uniform=True, colors=((0,) * 12)):
-        self._vertexes['quads'].extend((x1, y1, x2, y2, x3, y3, x4, y4))
-        if uniform:
-            self._colors['quads'].extend(color * 4)
-        else:
-            self._colors['quads'].extend(colors)
+    def set_quads(self, vertexes, colors):
+        self._vertex_lists['quads'] = vertexes
+        self._colors['quads'] = colors
+    # endregion
+
+    # region to be implemented functions
+    def set_bg(self, color):
+        raise NotImplementedError
+
+    def add_point(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def add_points(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def add_line(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def add_triangle(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def add_quad(self, *args, **kwargs):
+        raise NotImplementedError
+    # endregion
 
     def flush(self):
         """
@@ -197,32 +145,35 @@ class Screen:
         If the screen is visible, adds the vertexes in the buffer to the batch
         Clears the buffer
         """
-        if not self._vertex_lists['bg']:
-            self._vertex_lists['bg'] = self.batch.add(4, gl.GL_QUADS, self._bg_group,
-                                                      ('v2f', (0, 0, 0, self.h, self.w, self.h, self.w, 0)),
-                                                      ('c3B', self.bg * 4))
         for vtype in self._vertex_types:
             if self._vertex_lists[vtype]:
                 self._vertex_lists[vtype].delete()
                 self._vertex_lists[vtype] = None
-            vlist = None
             if not self.visible:
                 continue
+
             if vtype == 'points':
-                vlist = self.batch.add(len(self._vertexes[vtype]) // 3, gl.GL_POINTS, self._group, ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+                vlist = self._batch.add(len(self._vertexes[vtype]) // 3, GL_POINTS, None,
+                                        ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
             elif vtype == 'lines':
-                vlist = self.batch.add(len(self._vertexes[vtype]) // 3, gl.GL_LINES, self._group, ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+                vlist = self._batch.add(len(self._vertexes[vtype]) // 3, GL_LINES, None,
+                                        ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
             elif vtype == 'line_strip':
-                vlist = self.batch.add(len(self._vertexes[vtype]) // 2, gl.GL_LINE_STRIP, self._group, ('v2f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+                vlist = self._batch.add(len(self._vertexes[vtype]) // 3, GL_LINE_STRIP, None,
+                                        ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
             elif vtype == 'triangles':
-                vlist = self.batch.add(len(self._vertexes[vtype]) // 2, gl.GL_TRIANGLES, self._group, ('v2f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+                vlist = self._batch.add(len(self._vertexes[vtype]) // 3, GL_TRIANGLES, None,
+                                        ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
             elif vtype == 'quads':
-                vlist = self.batch.add(len(self._vertexes[vtype]) // 2, gl.GL_QUADS, self._group, ('v2f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+                vlist = self._batch.add(len(self._vertexes[vtype]) // 3, GL_QUADS, None,
+                                        ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+            else:
+                vlist = None
             self._vertex_lists[vtype] = vlist
 
-        self.clear_buffer()
+        self._clear()
 
-    def clear_buffer(self):
+    def _clear(self):
         """
         Clears the buffer arrays
         """
@@ -231,39 +182,12 @@ class Screen:
             self._colors[vtype] = []
 
     def draw(self):
-        self.batch.draw()
-
-    def is_inside(self, x, y):
         """
-        Returns if x, y is inside the screen
-        :param x: x
-        :param y: y
+        Draws its batch
         """
-        return 0 <= x - self.x < self.w and 0 <= y - self.y < self.h
+        self._batch.draw()
 
-    def on_resize(self, width, height):
-        self.resize(width, height)
-        self._group.w = self.w
-        self._group.h = self.h
-        self._bg_group.w = self.w
-        self._bg_group.h = self.h
-        self.set_bg(self.bg)
-
-    def set_pos(self, x, y):
-        """
-        Sets the screen's position
-        :param x: x
-        :param y: y
-        """
-        self.x = x
-        self.y = y
-        self._group.x = x
-        self._group.y = y
-        self._bg_group.x = x
-        self._bg_group.y = y
-
-    # to be overriden
-    # render should add points, then flush to the batch
+    # region to be overridden functions
     def render(self):
         pass
 
@@ -290,11 +214,94 @@ class Screen:
 
     def resize(self, width, height):
         pass
+    # endregion
+
+    def is_inside(self, x, y):
+        """
+        Returns if (x, y) is inside the screen
+        :param x: x
+        :param y: y
+        :return: if the point is inside the screen
+        """
+        return 0 <= x - self.x < self.w and 0 <= y - self.y < self.h
+
+    def on_resize(self, width, height):
+        self._ww = width
+        self._wh = height
+        self.resize(width, height)
+        self.set_bg(self.bg)
+
+    def set_pos(self, x, y):
+        """
+        Sets the screen's position
+        :param x: x
+        :param y: y
+        """
+        self.x = x
+        self.y = y
 
 
-class GraphScreen(Screen):
+class Screen2D(Screen):
+    def draw(self):
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        glOrtho(0, self._ww, 0, self._wh, -1001, 1001)
+        glMatrixMode(GL_MODELVIEW)
+
+        glEnable(GL_DEPTH_TEST)
+        glEnable(GL_SCISSOR_TEST)
+        glScissor(self.x, self.y, self.w, self.h)
+
+        glPushMatrix()
+        glTranslatef(self.x, self.y, 0)
+
+        self._batch.draw()
+
+        glPopMatrix()
+
+        glDisable(GL_SCISSOR_TEST)
+        glDisable(GL_DEPTH_TEST)
+
+    def set_bg(self, color):
+        if self._vertex_lists['bg']:
+            self._vertex_lists['bg'].delete()
+        vlist = self._batch.add(4, GL_QUADS, None,
+                                ('v3f', (0, 0, -1000, self.w, 0, -1000,
+                                         self.w, self.h, -1000, 0, self.h, -1000)),
+                                ('c3B', color * 4))
+        self._vertex_lists['bg'] = vlist
+
+    def add_point(self, x, y, z=0, color=(0, 0, 0)):
+        self._vertexes['points'].extend((x, y, z))
+        self._colors['points'].extend(color)
+
+    def add_points(self, points, colors):
+        self._vertexes['points'].extend(points)
+        self._colors['points'].extend(colors)
+
+    def add_line(self, x1, y1, x2, y2, z=0, color=(0, 0, 0)):
+        self._vertexes['lines'].extend((x1, y1, z, x2, y2, z))
+        self._colors['lines'].extend(color * 2)
+
+    def add_triangle(self, x1, y1, x2, y2, x3, y3, z=0, color=(0, 0, 0), uniform=True, colors=([0] * 9)):
+        self._vertexes['triangles'].extend((x1, y1, z, x2, y2, z, x3, y3, z))
+        if uniform:
+            self._colors['triangles'].extend(color * 3)
+        else:
+            self._colors['triangles'].extend(colors)
+
+    def add_quad(self, x1, y1, x2, y2, x3, y3, x4, y4, z=0, color=(0, 0, 0), uniform=True, colors=([0] * 12)):
+        self._vertexes['quads'].extend((x1, y1, z, x2, y2, z, x3, y3, z, x4, y4, z))
+        if uniform:
+            self._colors['quads'].extend(color * 4)
+        else:
+            self._colors['quads'].extend(colors)
+
+
+class GraphScreen(Screen2D):
     def __init__(self, x, y, width, height, gx, gy, gw, gh, valset, zoom_valobj, bg=(255, 255, 255), visible=True, active=True):
-        super().__init__(x, y, width, height, valset, bg=bg, visible=visible, active=active)
+        super().__init__(x, y, width, height, valset, bg, visible, active)
+        # original width / height
         self._ow = width
         self._oh = height
         self.set_graph_coords(gx, gy, gw, gh)
@@ -304,6 +311,7 @@ class GraphScreen(Screen):
         self.zoom_valobj = zoom_valobj
         self.total_zoom = 1
         self.drag = False
+        # offset for drag
         self.offsx = 0
         self.offsy = 0
 
@@ -361,30 +369,31 @@ class GraphScreen(Screen):
         self.gw = self._ogw / sqrt_z
         self.gh = self.gw * self.h / self.w
 
-    def resize(self, new_width, new_height):
+    def resize(self, width, height):
         """
         Resizes the screen based on the window's new width and height
-        Should be overritten if screen does not take up entire window
+        Should be overridden if screen does not take up entire window
         :param width: new window width
         :param height: new window height
         """
-        self.refit(new_width, new_height)
+        self.refit(width, width)
 
-    def refit(self, new_width, new_height):
+    def refit(self, width, height):
         """
         Sets the screen's width and height and changes the graph's width and height accordingly
-        :param new_width: new screen width
-        :param new_height: new screen height
+        :param width: new screen width
+        :param height: new screen height
         """
         old_gw = self.gw
         old_gh = self.gh
-        self.gw *= new_width / self.w
-        self.gh *= new_height / self.h
+        self.gw *= width / self.w
+        self.gh *= height / self.h
         self.set_graph_minmax()
         self.total_zoom *= (old_gw * old_gh) / (self.gw * self.gh)
-        self.w = new_width
-        self.h = new_height
+        self.w = width
+        self.h = height
 
+    # region graph move functions
     def up(self):
         """
         Moves the graph center up
@@ -416,6 +425,7 @@ class GraphScreen(Screen):
         self.gx += self.gw / 5
         self.set_graph_minmax()
         self.render()
+    # endregion
 
     def on_screen(self, x, y):
         """
@@ -435,29 +445,21 @@ class GraphScreen(Screen):
         """
         return x * self.gw / self.w + self.gx - self.gw / 2, y * self.gh / self.h + self.gy - self.gh / 2
 
-    def draw(self):
-        """
-        Translates by the drag, draws, and translates back
-        """
-        gl.glTranslatef(self.offsx, self.offsy, 0)
-        self.batch.draw()
-        gl.glTranslatef(-self.offsx, -self.offsy, 0)
-
     def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         if self.drag:
             self.offsx = x - self.mdownx
             self.offsy = y - self.mdowny
-            self._bg_group.offsx = -self.offsx
-            self._bg_group.offsy = -self.offsy
+            #self._bg_group.offsx = -self.offsx
+            #self._bg_group.offsy = -self.offsy
 
     def mouse_down(self, x, y, button, modifier):
-        if button == window_.mouse.MIDDLE:
+        if button == win.mouse.MIDDLE:
             self.drag = True
             self.mdownx = x
             self.mdowny = y
 
     def mouse_up(self, x, y, button, modifiers):
-        if button == window_.mouse.LEFT:
+        if button == win.mouse.LEFT:
             self.gx = self.gx - self.gw / 2 + x * self.gw / self.w
             self.gy = self.gy - self.gh / 2 + y * self.gh / self.h
             self.gw *= self.zoom_valobj.value
@@ -465,7 +467,7 @@ class GraphScreen(Screen):
             self.set_graph_minmax()
             self.total_zoom *= (1 / self.zoom_valobj.value) ** 2
             #print('zoomed to %.5f,%.5f with size %.9f,%.9f' % (self.gx, self.gy, self.gw, self.gh))
-        elif button == window_.mouse.RIGHT:
+        elif button == win.mouse.RIGHT:
             self.gx = self.gx - self.gw / 2 + x * self.gw / self.w
             self.gy = self.gy - self.gh / 2 + y * self.gh / self.h
             self.gw /= self.zoom_valobj.value
@@ -473,7 +475,7 @@ class GraphScreen(Screen):
             self.set_graph_minmax()
             self.total_zoom /= (1 / self.zoom_valobj.value) ** 2
             #print('zoomed to %.5f,%.5f with size %.9f,%.9f' % (self.gx, self.gy, self.gw, self.gh))
-        elif button == window_.mouse.MIDDLE:
+        elif button == win.mouse.MIDDLE:
             self.drag = False
             msx1, msy1 = self.on_plot(self.mdownx, self.mdowny)
             msx2, msy2 = self.on_plot(x, y)
@@ -482,75 +484,110 @@ class GraphScreen(Screen):
             self.set_graph_minmax()
             self.offsx = 0
             self.offsy = 0
-            self._bg_group.offsx = 0
-            self._bg_group.offsy = 0
         self.render()
 
     def key_down(self, symbol, modifiers):
-        if symbol == window_.key.LEFT:
+        if symbol == win.key.LEFT:
             self.left()
-        elif symbol == window_.key.RIGHT:
+        elif symbol == win.key.RIGHT:
             self.right()
-        elif symbol == window_.key.UP:
+        elif symbol == win.key.UP:
             self.up()
-        elif symbol == window_.key.DOWN:
+        elif symbol == win.key.DOWN:
             self.down()
 
 
 class Screen3D(Screen):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._group = Screen3DGroup(self.x, self.y, self.w, self.h, 0)
+    def __init__(self, x, y, width, height, camera, rotation, offset, valset, bg=(0, 0, 0), visible=True, active=True):
+        self.camera = camera
+        self.rotation = rotation
+        self.offset = offset
+        super().__init__(x, y, width, height, valset, bg, visible, active)
 
-    def on_resize(self, width, height):
-        self._group.set_win_size(width, height)
+    def set_bg(self, color):
+        pass
 
-    def add_triangle(self, x1, y1, x2, y2, x3, y3, z=0, color=(0, 0, 0), uniform=True, colors=((0,) * 9)):
-        self._vertexes['triangles'].extend((x1, y1, z, x2, y2, z, x3, y3, z))
+    def draw(self):
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        ar = self.w / self.h
+        gluPerspective(60, ar, .01, 10000)
+        glMatrixMode(GL_MODELVIEW)
+
+        glEnable(GL_DEPTH_TEST)
+        glEnable(GL_SCISSOR_TEST)
+        glScissor(int(self.x), int(self.y), int(self.x + self.w), int(self.y + self.h))
+
+        glPushMatrix()
+
+        '''
+        Walk view
+        glRotatef(self.rotation[0], 1, 0, 0)
+        glRotatef(self.rotation[1], 0, 1, 0)
+        glRotatef(self.rotation[2], 0, 0, 1)
+        glTranslatef(*self.camera)
+        glTranslatef(*self.offset)
+        '''
+
+        # Centered view
+        # dist has to be z value ???
+        glTranslatef(*self.camera)
+        glTranslatef(*self.offset)
+        glRotatef(self.rotation[0], 1, 0, 0)
+        glRotatef(self.rotation[1], 0, 1, 0)
+        glRotatef(self.rotation[2], 0, 0, 1)
+
+        self._batch.draw()
+
+        glPopMatrix()
+
+        glDisable(GL_SCISSOR_TEST)
+        glDisable(GL_DEPTH_TEST)
+
+    def add_point(self, x, y, z, color=(255, 255, 255)):
+        self._vertexes['points'].extend((x, y, z))
+        self._colors['points'].extend(color)
+
+    def add_points(self, points, colors):
+        self._vertexes['points'].extend(points)
+        self._colors['points'].extend(colors)
+
+    def add_line(self, x1, y1, z1, x2, y2, z2, color=(255, 255, 255)):
+        self._vertexes['lines'].extend((x1, y1, z1, x2, y2, z2))
+        self._colors['lines'].extend(color * 2)
+
+    def set_line_strip(self, lines, colors):
+        self._vertexes['line_strip'] = lines
+        self._colors['line_strip'] = colors
+
+    def add_triangle(self, x1, y1, z1, x2, y2, z2, x3, y3, z3, color=(255, 255, 255), uniform=True, colors=([255] * 9)):
+        self._vertexes['triangles'].extend((x1, y1, z1, x2, y2, z2, x3, y3, z3))
         if uniform:
             self._colors['triangles'].extend(color * 3)
         else:
             self._colors['triangles'].extend(colors)
 
-    def add_quad(self, x1, y1, x2, y2, x3, y3, x4, y4, z=0, color=(0, 0, 0), uniform=True, colors=((0,) * 12)):
-        self._vertexes['quads'].extend((x1, y1, z, x2, y2, z, x3, y3, z, x4, y4, z))
+    def add_quad(self, x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, color=(255, 255, 255), uniform=True, colors=([255] * 12)):
+        self._vertexes['quads'].extend((x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4))
         if uniform:
             self._colors['quads'].extend(color * 4)
         else:
             self._colors['quads'].extend(colors)
 
-    def flush(self):
-        """
-        Deletes the current vertex lists
-        If the screen is visible, adds the vertexes in the buffer to the batch
-        Clears the buffer
-        """
-        if not self._vertex_lists['bg']:
-            self._vertex_lists['bg'] = self.batch.add(4, gl.GL_QUADS, self._bg_group,
-                                                      ('v2f', (0, 0, 0, self.h, self.w, self.h, self.w, 0)),
-                                                      ('c3B', self.bg * 4))
-        for vtype in self._vertex_types:
-            if self._vertex_lists[vtype]:
-                self._vertex_lists[vtype].delete()
-                self._vertex_lists[vtype] = None
-            vlist = None
-            if not self.visible:
-                continue
-            if vtype == 'points':
-                vlist = self.batch.add(len(self._vertexes[vtype]) // 3, gl.GL_POINTS, self._group,
-                                       ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
-            elif vtype == 'lines':
-                vlist = self.batch.add(len(self._vertexes[vtype]) // 3, gl.GL_LINES, self._group,
-                                       ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
-            elif vtype == 'line_strip':
-                vlist = self.batch.add(len(self._vertexes[vtype]) // 2, gl.GL_LINE_STRIP, self._group,
-                                       ('v2f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
-            elif vtype == 'triangles':
-                vlist = self.batch.add(len(self._vertexes[vtype]) // 3, gl.GL_TRIANGLES, self._group,
-                                       ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
-            elif vtype == 'quads':
-                vlist = self.batch.add(len(self._vertexes[vtype]) // 3, gl.GL_QUADS, self._group,
-                                       ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
-            self._vertex_lists[vtype] = vlist
-
-        self.clear_buffer()
+    def key_down(self, symbol, modifiers):
+        if symbol == win.key.LEFT:
+            self.rotation[1] += 5
+        elif symbol == win.key.RIGHT:
+            self.rotation[1] -= 5
+        elif symbol == win.key.UP:
+            self.rotation[0] += 5
+        elif symbol == win.key.DOWN:
+            self.rotation[0] -= 5
+        elif symbol == win.key.X:
+            self.rotation[2] -= 5
+        elif symbol == win.key.Z:
+            self.rotation[2] += 5
+        elif symbol == win.key.S:
+            self.offset[2] += 10
+        elif symbol == win.key.A:
+            self.offset[2] -= 10

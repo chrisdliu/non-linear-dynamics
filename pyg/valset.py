@@ -115,11 +115,11 @@ class ValSet:
     def __init__(self):
         self.vals = {}
 
-    def add_float_value(self, name, value, limit='', inclusive='ul', low=0, high=1):
-        self.vals[name] = FloatValue(value, limit, inclusive, low, high)
-
     def add_int_value(self, name, value, limit='', inclusive='ul', low=0, high=1):
         self.vals[name] = IntValue(value, limit, inclusive, low, high)
+
+    def add_float_value(self, name, value, limit='', inclusive='ul', low=0, high=1):
+        self.vals[name] = FloatValue(value, limit, inclusive, low, high)
 
     def add_complex_value(self, name, value, limit='', inclusive='ul', low=0, high=1):
         self.vals[name] = ComplexValue(value, limit, inclusive, low, high)
