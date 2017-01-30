@@ -22,13 +22,14 @@ y: delete selected coords
 Note: split screen is really slow because of some stupid bug
 """
 
+import ctypes
+import time
+
+import numpy as np
+import pyglet
+from numba import jit, vectorize, guvectorize
 
 import pyg
-import pyglet
-import numpy as np
-from numba import jit, vectorize, guvectorize
-import time
-import ctypes
 
 
 @vectorize('float64(complex128, complex128, float64, int32)', target='parallel')
@@ -271,7 +272,7 @@ class MandelScreen(pyg.screen.GraphScreen):
                 idx = get_pos(i, j, self.w)
                 points.extend([i, j, 0])
                 point_colors.extend([colors[idx], colors[idx + 1], colors[idx + 2]])
-        self.set_points_both(points, point_colors)
+        self.set_points(points, point_colors)
         self.flush()
         end = time.time()
 
@@ -353,7 +354,7 @@ class JuliaScreen(pyg.screen.GraphScreen):
                     idx = get_pos(i, j, self.w)
                     points.extend([i, j, 0])
                     point_colors.extend([colors[idx], colors[idx + 1], colors[idx + 2]])
-            self.set_points_both(points, point_colors)
+            self.set_points(points, point_colors)
             self.flush()
         end = time.time()
         self.valset.set_val('flushtime', ((end - start) * 1000))

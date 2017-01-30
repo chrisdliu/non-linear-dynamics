@@ -1,11 +1,34 @@
-from pyglet import graphics, window as win
+import pyglet.graphics as _graphics
+import pyglet.window as _win
+
 from pyglet.gl import *
 
 
 class Screen:
+    """
+    A base screen class
+    """
+
     _vertex_types = ('points', 'lines', 'line_strip', 'triangles', 'quads')
 
     def __init__(self, x, y, width, height, valset, bg=(255, 255, 255), visible=True, active=True):
+        """
+        Screen initializer
+        :type x: int
+        :param x: x coord
+        :type y: int
+        :param y: y coord
+        :type width: int
+        :param width: width
+        :type height: int
+        :param height: height
+        :type valset: pyg.valset.Valset
+        :param valset: the window's value set
+        :type bg: tuple (rgb, length 3)
+        :param bg:
+        :param visible:
+        :param active:
+        """
         self.x = x
         self.y = y
         self.w = width
@@ -16,7 +39,7 @@ class Screen:
         self.visible = visible
         self.active = active
 
-        self._batch = graphics.Batch()
+        self._batch = _graphics.Batch()
         self._vertex_lists = {}
         self._vertexes = {}
         self._colors = {}
@@ -99,23 +122,23 @@ class Screen:
 
     # region vertex set functions
     def set_points(self, vertexes, colors):
-        self._vertex_lists['points'] = vertexes
+        self._vertexes['points'] = vertexes
         self._colors['points'] = colors
 
     def set_lines(self, vertexes, colors):
-        self._vertex_lists['lines'] = vertexes
+        self._vertexes['lines'] = vertexes
         self._colors['lines'] = colors
 
     def set_line_strip(self, vertexes, colors):
-        self._vertex_lists['line_strip'] = vertexes
+        self._vertexes['line_strip'] = vertexes
         self._colors['line_strip'] = colors
 
     def set_triangles(self, vertexes, colors):
-        self._vertex_lists['triangles'] = vertexes
+        self._vertexes['triangles'] = vertexes
         self._colors['triangles'] = colors
 
     def set_quads(self, vertexes, colors):
-        self._vertex_lists['quads'] = vertexes
+        self._vertexes['quads'] = vertexes
         self._colors['quads'] = colors
     # endregion
 
@@ -253,7 +276,7 @@ class Screen2D(Screen):
         glScissor(self.x, self.y, self.w, self.h)
 
         glPushMatrix()
-        glTranslatef(self.x, self.y, 0)
+        glTranslatef(self.x + .1, self.y + .1, 0)
 
         self._batch.draw()
 
@@ -453,13 +476,13 @@ class GraphScreen(Screen2D):
             #self._bg_group.offsy = -self.offsy
 
     def mouse_down(self, x, y, button, modifier):
-        if button == win.mouse.MIDDLE:
+        if button == _win.mouse.MIDDLE:
             self.drag = True
             self.mdownx = x
             self.mdowny = y
 
     def mouse_up(self, x, y, button, modifiers):
-        if button == win.mouse.LEFT:
+        if button == _win.mouse.LEFT:
             self.gx = self.gx - self.gw / 2 + x * self.gw / self.w
             self.gy = self.gy - self.gh / 2 + y * self.gh / self.h
             self.gw *= self.zoom_valobj.value
@@ -467,7 +490,7 @@ class GraphScreen(Screen2D):
             self.set_graph_minmax()
             self.total_zoom *= (1 / self.zoom_valobj.value) ** 2
             #print('zoomed to %.5f,%.5f with size %.9f,%.9f' % (self.gx, self.gy, self.gw, self.gh))
-        elif button == win.mouse.RIGHT:
+        elif button == _win.mouse.RIGHT:
             self.gx = self.gx - self.gw / 2 + x * self.gw / self.w
             self.gy = self.gy - self.gh / 2 + y * self.gh / self.h
             self.gw /= self.zoom_valobj.value
@@ -475,7 +498,7 @@ class GraphScreen(Screen2D):
             self.set_graph_minmax()
             self.total_zoom /= (1 / self.zoom_valobj.value) ** 2
             #print('zoomed to %.5f,%.5f with size %.9f,%.9f' % (self.gx, self.gy, self.gw, self.gh))
-        elif button == win.mouse.MIDDLE:
+        elif button == _win.mouse.MIDDLE:
             self.drag = False
             msx1, msy1 = self.on_plot(self.mdownx, self.mdowny)
             msx2, msy2 = self.on_plot(x, y)
@@ -487,13 +510,13 @@ class GraphScreen(Screen2D):
         self.render()
 
     def key_down(self, symbol, modifiers):
-        if symbol == win.key.LEFT:
+        if symbol == _win.key.LEFT:
             self.left()
-        elif symbol == win.key.RIGHT:
+        elif symbol == _win.key.RIGHT:
             self.right()
-        elif symbol == win.key.UP:
+        elif symbol == _win.key.UP:
             self.up()
-        elif symbol == win.key.DOWN:
+        elif symbol == _win.key.DOWN:
             self.down()
 
 
@@ -575,19 +598,19 @@ class Screen3D(Screen):
             self._colors['quads'].extend(colors)
 
     def key_down(self, symbol, modifiers):
-        if symbol == win.key.LEFT:
+        if symbol == _win.key.LEFT:
             self.rotation[1] += 5
-        elif symbol == win.key.RIGHT:
+        elif symbol == _win.key.RIGHT:
             self.rotation[1] -= 5
-        elif symbol == win.key.UP:
+        elif symbol == _win.key.UP:
             self.rotation[0] += 5
-        elif symbol == win.key.DOWN:
+        elif symbol == _win.key.DOWN:
             self.rotation[0] -= 5
-        elif symbol == win.key.X:
+        elif symbol == _win.key.X:
             self.rotation[2] -= 5
-        elif symbol == win.key.Z:
+        elif symbol == _win.key.Z:
             self.rotation[2] += 5
-        elif symbol == win.key.S:
+        elif symbol == _win.key.S:
             self.offset[2] += 10
-        elif symbol == win.key.A:
+        elif symbol == _win.key.A:
             self.offset[2] -= 10

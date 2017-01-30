@@ -22,14 +22,14 @@ y: delete selected coords
 Note: split screen is really slow because of some stupid bug
 """
 
+import ctypes
+import time
+
+import numpy as np
+import pyglet
+from numba import jit, guvectorize
 
 import pyg
-import pyglet
-import numpy as np
-from numba import jit, vectorize, guvectorize
-import time
-import ctypes
-
 
 
 @jit
@@ -231,7 +231,7 @@ class NewtonScreen(pyg.screen.GraphScreen):
         self.refit(width, height - 200)
 
 
-class NewtonWindow(pyg._window.Window):
+class NewtonWindow(pyg.window.Window):
     def set_vars(self):
         """
         Adds the gui components

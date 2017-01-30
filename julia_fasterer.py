@@ -1,8 +1,10 @@
-import pyg
-import pyglet
-import numpy as np
-from numba import jit, guvectorize
 import time
+
+import numpy as np
+import pyglet
+from numba import jit, guvectorize
+
+import pyg
 
 
 @jit
@@ -183,7 +185,7 @@ class JuliaScreen(pyg.screen.GraphScreen):
         self.valset.set_val('cmpr', cmpr)
 
         # self.set_points_both(points, colors)
-        self.set_lines_both(lines, colors)
+        self.set_lines(lines, colors)
 
     def render(self):
         start = time.time()

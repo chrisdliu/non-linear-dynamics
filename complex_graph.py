@@ -1,15 +1,8 @@
-import pyg
 import pyglet
+import pyg
 
 
 class ComplexScreen(pyg.screen.GraphScreen):
-    def reset_screen(self):
-        self.sx = 0
-        self.sy = 0
-        self.sw = 10
-        self.sh = 10
-        self.render()
-
     def render(self):
         lx1, ly1 = self.on_screen(0, -10)
         lx2, ly2 = self.on_screen(0, 10)
@@ -54,21 +47,19 @@ class ComplexScreen(pyg.screen.GraphScreen):
         self.refit(width, height - 200)
 
 
-class ComplexWindow(pyg._window.Window):
+class ComplexWindow(pyg.window.Window):
     def set_vars(self):
-        self.valset.add_value('sz', .5)
-        self.valset.add_value('n', 0)
-        self.valset.add_value('power', 2)
-        self.valset.add_value('hqw', 100)
-        self.valset.add_value('c', 0+0j)
-        screen = ComplexScreen(0, 200, 500, 500, valset=self.valset)
+        self.add_float_value('sz', .5)
+        self.add_int_value('n', 0, limit='l', low=0)
+        self.add_float_value('power', 2, limit='l', inclusive='', low=0)
+        self.add_int_value('hqw', 100)
+        self.add_complex_value('c', 0+0j)
+        screen = ComplexScreen(0, 200, 500, 500, 0, 0, 5, 5, self.valset, self.get_valobj('sz'))
         self.add_screen('main', screen)
-        self.add_int_field('n', 260, 115, 100, 15, 'N', self.valset.get_obj('n'), limit='l', low=0)
-        self.add_float_field('power', 260, 135, 100, 15, 'Power', self.valset.get_obj('power'), limit='l', inclusive='', low=0)
-        self.add_int_field('hqw', 260, 155, 100, 15, 'Quality', self.valset.get_obj('hqw'))
-        self.add_complex_field('c', 260, 95, 100, 15, 'C', self.valset.get_obj('c'))
+        self.add_int_field('n', 260, 115, 100, 15, 'N', self.valset.get_valobj('n'))
+        self.add_float_field('power', 260, 135, 100, 15, 'Power', self.valset.get_valobj('power'))
+        self.add_int_field('hqw', 260, 155, 100, 15, 'Quality', self.valset.get_valobj('hqw'))
+        self.add_complex_field('c', 260, 95, 100, 15, 'C', self.valset.get_valobj('c'))
         self.add_button('resetb', 190, 120, 40, 40, 'Reset', self.screens['main'].reset_screen)
 
-
-window = ComplexWindow(width=500, height=700, caption='Complex Graph', bg=(0, 0, 0, 1), resizable=True)
-pyglet.app.run()
+pyg.run(ComplexWindow, 500, 700, 'Complex Graph')

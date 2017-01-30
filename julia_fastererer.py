@@ -1,9 +1,11 @@
-import pyg
-import pyglet
-import numpy as np
-from numba import jit, guvectorize
-import time
 import ctypes
+import time
+
+import numpy as np
+import pyglet
+from numba import jit, guvectorize
+
+import pyg
 
 
 @jit

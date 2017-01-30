@@ -12,10 +12,11 @@ Click to select fields, type to enter characters, enter to parse input
 Arrow keys can also move the screen in the corresponding direction
 """
 
-import pyglet
-import pyg
-
 import time
+
+import pyglet
+
+import pyg
 
 
 def get_orbit(a, x, trans, iter):
@@ -198,7 +199,7 @@ class LogisticScreen(pyg.screen.GraphScreen):
 
 
 
-class LogisticWindow(pyg._window.Window):
+class LogisticWindow(pyg.window.Window):
     def set_vars(self):
         """
         Sets values and objects of the window
@@ -213,7 +214,7 @@ class LogisticWindow(pyg._window.Window):
         self.valset.add_int_value('cob-iter', 25)
         self.valset.add_int_value('cob-tail', 25)
 
-        # screens
+        # screen
         self.add_screen('main', (LogisticScreen(0, 200, 600, 600, self.valset, self.get_valobj('sz'))))
 
         # fields

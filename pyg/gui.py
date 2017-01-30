@@ -1,15 +1,39 @@
+import pyglet.gl as _gl
+import pyglet.graphics as _graphics
 import pyglet.text as _text
-import pyglet.window as win
+import pyglet.window as _win
 
-from .screengroup import *
-from .valset import *
+from pyg.valset import *
 
 
 class GuiObj:
-    _group_1 = graphics.OrderedGroup(1)  # boxes
-    _group_2 = graphics.OrderedGroup(2)  # labels (text)
+    """
+    Superclass for all gui objects
+    """
 
-    def __init__(self, x, y, w, h, batch, focusable=False, visible=True, active=True):
+    # box group
+    _group_1 = _graphics.OrderedGroup(1)
+    # label group
+    _group_2 = _graphics.OrderedGroup(2)
+
+    def __init__(self, x, y, w, h, batch, focusable=False, visible=True):
+        """
+        GuiObj initializer
+        :type x: int
+        :param x: x coord
+        :type y: int
+        :param y: y coord
+        :type w: int
+        :param w: width
+        :type h: int
+        :param h: height
+        :type batch: pyglet.graphics.Batch
+        :param batch: the batch to add its vertex lists to
+        :type focusable: bool
+        :param focusable:
+        :type visible: bool
+        :param visible: if the object is visible (is drawn)
+        """
         self.x = x
         self.y = y
         self.w = w
@@ -17,45 +41,83 @@ class GuiObj:
         self._batch = batch
         self.focusable = focusable
         self.visible = visible
-        self.active = active
         self.is_focus = False
         self.is_hover = False
         self._vertex_lists = []
 
     def on(self):
-        self.active = True
+        """
+        Sets visible to True
+        """
         self.set_visible(True)
 
     def off(self):
-        self.active = False
+        """
+        Sets visible to False
+        """
         self.set_visible(False)
 
     def enter(self):
+        """
+        Called when the guiobj is in focus
+        """
         if self.focusable:
             self.is_focus = True
             self.render()
 
     def exit(self):
+        """
+        Called when the guiobj focus leaves
+        :return:
+        """
         self.is_focus = False
         self.render()
 
     def hover_on(self):
+        """
+        Called when the mouse hovers on the guiobj
+        """
         self.is_hover = True
         self.render()
 
     def hover_off(self):
+        """
+        Called when the mouse leaves the guiobj
+        :return:
+        """
         self.is_hover = False
         self.render()
 
     def set_pos(self, x, y):
+        """
+        Sets the position of the guiobj
+        :type x: int
+        :param x: x coord
+        :type x: int
+        :param y: y coord
+        """
         self.x = x
         self.y = y
 
     def set_size(self, w, h):
+        """
+        Sets the size of the guiobj
+        :type w: int
+        :param w: width
+        :type h: int
+        :param h: height
+        """
         self.w = w
         self.h = h
 
     def set_visible(self, visible):
+        """
+        Sets the guiobj's visible field
+        If visible is True, it is rendered
+        If visible is False, it is unrendered
+        :type visible: bool
+        :param visible: visible
+        """
         if visible:
             self.render()
         else:
@@ -63,17 +125,36 @@ class GuiObj:
         self.visible = visible
 
     def is_inside(self, x, y):
+        """
+        Returns if the mouse is inside the guiobj
+        :type x: int
+        :param x: mouse x
+        :type y: int
+        :param y: mouse y
+        :rtype: bool
+        """
         return self.x <= x < self.x + self.w and self.y <= y < self.y + self.h
 
-    def add_vlist(self, vlist):
+    def _add_vlist(self, vlist):
+        """
+        Adds a vertex list
+        :param vlist: a vertex list
+        """
         self._vertex_lists.append(vlist)
 
     def _clear(self):
+        """
+        Deletes all vertex lists and removes them
+        """
         for vlist in self._vertex_lists:
             vlist.delete()
         self._vertex_lists.clear()
 
     def render(self):
+        """
+        Renders the guiobj
+        Should be overridden
+        """
         pass
 
     def key_down(self, symbol, modifiers):
@@ -118,10 +199,10 @@ class Box(GuiObj):
 
     def render(self):
         self._clear()
-        self.add_vlist(self._batch.add(4, GL_QUADS, self._group_1,
-                                       ('v2f', (self.x, self.y, self.x + self.w, self.y,
+        self._add_vlist(self._batch.add(4, _gl.GL_QUADS, self._group_1,
+                                        ('v2f', (self.x, self.y, self.x + self.w, self.y,
                                                 self.x + self.w, self.y + self.h, self.x, self.y + self.h)),
-                                       ('c3B', self.color * 4)))
+                                        ('c3B', self.color * 4)))
 
 
 class Field(GuiObj):
@@ -153,9 +234,9 @@ class Field(GuiObj):
         self._label.set_pos(x, y)
 
     def key_down(self, symbol, modifiers):
-        if symbol == win.key.ENTER:
+        if symbol == _win.key.ENTER:
             self.exit()
-        elif symbol == win.key.BACKSPACE:
+        elif symbol == _win.key.BACKSPACE:
             if len(self.input) > 0:
                 self.input = self.input[:-1]
                 self.update_color()
@@ -255,13 +336,11 @@ class Button(GuiObj):
         self._label.set_pos(x, y)
 
     def set_visible(self, visible):
+        super().set_visible(visible)
         if visible:
-            self.render()
             self.set_text(self._text)
         else:
-            self._clear()
             self.set_text('')
-        self.visible = visible
 
     def mouse_up(self, *args, **kwargs):
         if self.action:
@@ -373,3 +452,6 @@ class FloatSlider(Slider):
         if type(valobj) is not FloatValue:
             raise TypeError('Value object is not FloatValue!')
         super().__init__(x, y, w, h, offs, field_name, valobj, low, high, batch)
+
+
+__imports__ = (GuiObj, Label, Box,)

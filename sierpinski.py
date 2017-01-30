@@ -1,5 +1,6 @@
-import pyg
 import random
+
+import pyg
 from vmath import *
 
 

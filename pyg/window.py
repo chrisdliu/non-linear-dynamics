@@ -1,16 +1,20 @@
-import pyglet.clock as clock
+import pyglet.clock as _clock
+import pyglet.graphics as _graphics
+import pyglet.window as _win
+
+from pyglet.gl import *
+
 from .gui import *
-from .screengroup import *
 from .valset import *
 
 
-class Window(win.Window):
+class Window(_win.Window):
     def __init__(self, width=600, height=600, caption='Window Caption', bg=(0, 0, 0, 1), *args, **kwargs):
         super().__init__(width=width, height=height, caption=caption, *args, **kwargs)
         self.set_minimum_size(width, height)
         glClearColor(*bg)
 
-        self._batch = graphics.Batch()
+        self._batch = _graphics.Batch()
         self.screens = {}
         self.buttons = {}
         self.labels = {}
@@ -24,7 +28,7 @@ class Window(win.Window):
 
         self.set_vars()
         self.update_labels()
-        clock.schedule_interval(self.tick, 0.1)
+        _clock.schedule_interval(self.tick, 0.1)
 
     # region add gui components
     def add_screen(self, name, screen):
@@ -235,7 +239,7 @@ class Window(win.Window):
                 return
             elif isinstance(self.focus, Button):
                 self.focus.exit()
-                if self.focus.is_inside(x, y) and self.focus.active:
+                if self.focus.is_inside(x, y):  # and self.focus.active:
                     self.focus.mouse_up()
                 self.focus = None
                 return
@@ -243,7 +247,7 @@ class Window(win.Window):
     def key_down(self, symbol, modifiers):
         if self.focus:
             self.focus.key_down(symbol, modifiers)
-            if symbol == win.key.ENTER:
+            if symbol == _win.key.ENTER:
                 self.focus = None
                 self.render()
         else:

@@ -10,10 +10,12 @@ Click to select fields, type to enter characters, enter to parse input
 Click and hold to move sliders
 """
 
-import pyg
-import pyglet
 import math
+
 import numpy as np
+import pyglet
+
+import pyg
 
 
 def get_line_points(line_points, theta, maxlevel, level=0):
@@ -105,7 +107,7 @@ def get_length_text(length):
         return '%.5f AUs' % (length / 150000000000)
 
 
-class koch_window(pyg._window.Window):
+class koch_window(pyg.window.Window):
     def set_vars(self):
         #ds = (log 4) / (log 2 + log (1 + cos(theta)))
         self.valset.add_float_value('gz', .5, limit='ul', inclusive='', low=0, high=1)
