@@ -204,23 +204,23 @@ class Window(_win.Window):
             if self.focus.is_inside(x, y):
                 self.focus.mouse_down(x, y, buttons, modifiers)
             else:
-                self.focus.exit()
+                self.focus.focus_off()
                 self.focus = None
         else:
             for button in self.buttons.values():
                 if button.is_inside(x, y):
                     self.focus = button
-                    self.focus.enter()
+                    self.focus.focus_on()
                     return
             for field in self.fields.values():
                 if field.is_inside(x, y):
                     self.focus = field
-                    self.focus.enter()
+                    self.focus.focus_on()
                     return
             for slider in self.sliders.values():
                 if slider.is_inside(x, y):
                     self.focus = slider
-                    self.focus.enter()
+                    self.focus.focus_on()
                     return
 
     def mouse_up(self, x, y, buttons, modifiers):
@@ -234,11 +234,11 @@ class Window(_win.Window):
                 return
         if self.focus:
             if isinstance(self.focus, Slider):
-                self.focus.exit()
+                self.focus.focus_off()
                 self.focus = None
                 return
             elif isinstance(self.focus, Button):
-                self.focus.exit()
+                self.focus.focus_off()
                 if self.focus.is_inside(x, y):  # and self.focus.active:
                     self.focus.mouse_up()
                 self.focus = None

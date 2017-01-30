@@ -287,15 +287,16 @@ class Vector:
         """
         Returns the number at a given index.
 
-        >>> a = Vector(1, 2)
+        >>> a = Vector(1, 2, 3)
         >>> a[0]
         1
-        >>> a[1]
-        2
+        >>> a[:2]
+        [1, 2]
         """
-        if item < 0 or item >= self.dim:
-            raise IndexError
-        return self._data[item]
+        if isinstance(item, (int, slice)):
+            return self._data[item]
+        else:
+            raise TypeError('Item must be an integer or slice!')
 
     def __setitem__(self, key, value):
         """

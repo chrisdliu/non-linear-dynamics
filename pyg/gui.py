@@ -8,13 +8,93 @@ from pyg.valset import *
 
 class GuiObj:
     """
-    Superclass for all gui objects
+    Basic gui objects (boxes, labels)
     """
 
-    # box group
-    _group_1 = _graphics.OrderedGroup(1)
+    # primitives group
+    group_1 = _graphics.OrderedGroup(1)
     # label group
-    _group_2 = _graphics.OrderedGroup(2)
+    group_2 = _graphics.OrderedGroup(2)
+
+    def __init__(self, x, y, w, h, batch, visible=True):
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+        self._batch = batch
+        self._vertex_lists = []
+        self.visible = visible
+
+    def set_pos(self, x, y):
+        self.x = x
+        self.y = y
+
+    def set_size(self, w, h):
+        self.w = w
+        self.h = h
+
+    def set_visible(self, visible):
+        self.visible = visible
+        if visible:
+            self.render()
+        else:
+            self._clear()
+
+    def _add_vlist(self, vlist):
+        self._vertex_lists.append(vlist)
+
+    def render(self):
+        pass
+
+    def _clear(self):
+        for vlist in self._vertex_lists:
+            vlist.delete()
+        self._vertex_lists.clear()
+
+
+class Label(GuiObj):
+    def __init__(self, x, y, text, batch, color=(255, 255, 255)):
+        super().__init__(x, y, 0, 0, batch)
+        self.text = text
+        self._pyglet_label = _text.Label(text, font_name='Menlo', font_size=8, x=x, y=y, batch=batch,
+                                         group=self.group_2, color=(*color, 255))
+
+    def set_visible(self, visible):
+        if visible:
+            self._pyglet_label.text = self.text
+        else:
+            self._pyglet_label.text = ''
+        self.visible = visible
+
+    def set_text(self, text):
+        self._pyglet_label.text = text
+
+    def set_pos(self, x, y):
+        super().set_pos(x, y)
+        self._pyglet_label.x = x
+        self._pyglet_label.y = y
+
+
+class Box(GuiObj):
+    def __init__(self, x, y, w, h, batch, color=(255, 255, 255)):
+        super().__init__(x, y, w, h, batch)
+        self.color = color
+
+    def set_color(self, r, g, b):
+        self.color = (r, g, b)
+
+    def render(self):
+        self._clear()
+        self._add_vlist(self._batch.add(4, _gl.GL_QUADS, self.group_1,
+                                        ('v2f', (self.x, self.y, self.x + self.w, self.y,
+                                                 self.x + self.w, self.y + self.h, self.x, self.y + self.h)),
+                                        ('c3B', self.color * 4)))
+
+
+class GuiComp:
+    """
+    Base gui component (buttons, fields, sliders)
+    """
 
     def __init__(self, x, y, w, h, batch, focusable=False, visible=True):
         """
@@ -43,7 +123,29 @@ class GuiObj:
         self.visible = visible
         self.is_focus = False
         self.is_hover = False
-        self._vertex_lists = []
+        self.guiobjs = {}
+
+    def set_pos(self, x, y):
+        """
+        Sets the position of the gui component
+        :type x: int
+        :param x: x coord
+        :type x: int
+        :param y: y coord
+        """
+        self.x = x
+        self.y = y
+
+    def set_size(self, w, h):
+        """
+        Sets the size of the gui component
+        :type w: int
+        :param w: width
+        :type h: int
+        :param h: height
+        """
+        self.w = w
+        self.h = h
 
     def on(self):
         """
@@ -57,59 +159,6 @@ class GuiObj:
         """
         self.set_visible(False)
 
-    def enter(self):
-        """
-        Called when the guiobj is in focus
-        """
-        if self.focusable:
-            self.is_focus = True
-            self.render()
-
-    def exit(self):
-        """
-        Called when the guiobj focus leaves
-        :return:
-        """
-        self.is_focus = False
-        self.render()
-
-    def hover_on(self):
-        """
-        Called when the mouse hovers on the guiobj
-        """
-        self.is_hover = True
-        self.render()
-
-    def hover_off(self):
-        """
-        Called when the mouse leaves the guiobj
-        :return:
-        """
-        self.is_hover = False
-        self.render()
-
-    def set_pos(self, x, y):
-        """
-        Sets the position of the guiobj
-        :type x: int
-        :param x: x coord
-        :type x: int
-        :param y: y coord
-        """
-        self.x = x
-        self.y = y
-
-    def set_size(self, w, h):
-        """
-        Sets the size of the guiobj
-        :type w: int
-        :param w: width
-        :type h: int
-        :param h: height
-        """
-        self.w = w
-        self.h = h
-
     def set_visible(self, visible):
         """
         Sets the guiobj's visible field
@@ -118,15 +167,44 @@ class GuiObj:
         :type visible: bool
         :param visible: visible
         """
+        self.visible = visible
+        for guiobj in self.guiobjs.values():
+            guiobj.set_visible(visible)
         if visible:
             self.render()
-        else:
-            self._clear()
-        self.visible = visible
+
+    def focus_on(self):
+        """
+        Called when the focus is the gui component
+        """
+        if self.focusable:
+            self.is_focus = True
+            self.render()
+
+    def focus_off(self):
+        """
+        Called when the focus leaves the gui component
+        """
+        self.is_focus = False
+        self.render()
+
+    def hover_on(self):
+        """
+        Called when the mouse hovers on the gui component
+        """
+        self.is_hover = True
+        self.render()
+
+    def hover_off(self):
+        """
+        Called when the mouse leaves the gui component
+        """
+        self.is_hover = False
+        self.render()
 
     def is_inside(self, x, y):
         """
-        Returns if the mouse is inside the guiobj
+        Returns if the mouse is inside the gui component
         :type x: int
         :param x: mouse x
         :type y: int
@@ -135,27 +213,25 @@ class GuiObj:
         """
         return self.x <= x < self.x + self.w and self.y <= y < self.y + self.h
 
-    def _add_vlist(self, vlist):
-        """
-        Adds a vertex list
-        :param vlist: a vertex list
-        """
-        self._vertex_lists.append(vlist)
+    def add_label(self, name, x, y, text, batch, color=(255, 255, 255)):
+        self.guiobjs[name] = Label(x, y, text, batch, color)
 
-    def _clear(self):
-        """
-        Deletes all vertex lists and removes them
-        """
-        for vlist in self._vertex_lists:
-            vlist.delete()
-        self._vertex_lists.clear()
+    def add_box(self, name, x, y, w, h, batch, color=(255, 255, 255)):
+        self.guiobjs[name] = Box(x, y, w, h, batch, color)
 
     def render(self):
         """
-        Renders the guiobj
+        Sets parameters for the gui objects
         Should be overridden
         """
         pass
+
+    def flush(self):
+        """
+        Renders all the gui objects
+        """
+        for guiobj in self.guiobjs.values():
+            guiobj.render()
 
     def key_down(self, symbol, modifiers):
         pass
@@ -173,39 +249,68 @@ class GuiObj:
         pass
 
 
-class Label(GuiObj):
-    def __init__(self, x, y, text, batch, color=(255, 255, 255)):
-        super().__init__(x, y, 0, 0, batch)
-        self._pyglet_label = _text.Label(text, font_name='Menlo', font_size=8, x=x, y=y, batch=batch,
-                                               group=self._group_2, color=(*color, 255))
-
-    def set_text(self, text):
-        self._pyglet_label.text = text
+class Button(GuiComp):
+    def __init__(self, x, y, w, h, text, batch, action=None):
+        super().__init__(x, y, w, h, batch, True)
+        self.action = action
+        self.add_label('label', x, y, text, batch)
+        self.add_box('box', x, y, w, h, batch, color=(90, 90, 90))
 
     def set_pos(self, x, y):
         super().set_pos(x, y)
-        self._pyglet_label.x = x
-        self._pyglet_label.y = y
+        self.guiobjs['label'].set_pos(x, y)
+        self.guiobjs['box'].set_pos(x, y)
 
+    def mouse_up(self, *args, **kwargs):
+        if self.action:
+            self.action(*args, **kwargs)
 
-class Box(GuiObj):
-    def __init__(self, x, y, w, h, batch, color=(255, 255, 255)):
-        super().__init__(x, y, w, h, batch)
-        self.color = color
-
-    def set_color(self, r, g, b):
-        self.color = (r, g, b)
-        self.render()
+    def set_text(self, text):
+        self.guiobjs['label'].set_text(text)
 
     def render(self):
-        self._clear()
-        self._add_vlist(self._batch.add(4, _gl.GL_QUADS, self._group_1,
-                                        ('v2f', (self.x, self.y, self.x + self.w, self.y,
-                                                self.x + self.w, self.y + self.h, self.x, self.y + self.h)),
-                                        ('c3B', self.color * 4)))
+        if self.is_focus:
+            self.guiobjs['box'].set_color(150, 150, 150)
+        elif self.is_hover:
+            self.guiobjs['box'].set_color(120, 120, 120)
+        else:
+            self.guiobjs['box'].set_color(90, 90, 90)
+        self.flush()
 
 
-class Field(GuiObj):
+class ToggleButton(Button):
+    def __init__(self, x, y, w, h, text, boolval, batch):
+        self.boolval = boolval
+        super().__init__(x, y, w, h, text, batch, action=self.toggle)
+
+    def toggle(self):
+        self.boolval.toggle()
+        self.render()
+
+    def set_pos(self, x, y):
+        super().set_pos(x, y)
+        self.guiobjs['label'].set_pos(x, y)
+        self.guiobjs['box'].set_pos(x, y)
+
+    def render(self):
+        if self.boolval.value:
+            if self.is_focus:
+                self.guiobjs['box'].set_color(50, 150, 50)
+            elif self.is_hover:
+                self.guiobjs['box'].set_color(30, 120, 30)
+            else:
+                self.guiobjs['box'].set_color(10, 90, 10)
+        else:
+            if self.is_focus:
+                self.guiobjs['box'].set_color(150, 50, 50)
+            elif self.is_hover:
+                self.guiobjs['box'].set_color(120, 30, 30)
+            else:
+                self.guiobjs['box'].set_color(90, 10, 10)
+        self.flush()
+
+
+class Field(GuiComp):
     accepted = ()
 
     def __init__(self, x, y, w, h, name, valobj, batch):
@@ -215,27 +320,28 @@ class Field(GuiObj):
         self.input = ''
         self.input_accepted = False
         self.input_valid = False
-        self._label = Label(x, y, self.get_label_text(), batch)
-        self._box = Box(x, y, w, h, batch, color=(90, 90, 90))
+        self.add_label('label', x, y, self.get_label_text(), batch)
+        self.add_box('box', x, y, w, h, batch, color=(90, 90, 90))
 
-    def enter(self):
+    def focus_on(self):
         self.input = ''
         self.input_accepted = False
         self.input_valid = False
-        super().enter()
+        super().focus_on()
 
-    def exit(self):
+    def focus_off(self):
         self.valobj.set_val_cast(self.input)
         self.input = ''
-        super().exit()
+        super().focus_off()
 
     def set_pos(self, x, y):
         super().set_pos(x, y)
-        self._label.set_pos(x, y)
+        self.guiobjs['label'].set_pos(x, y)
+        self.guiobjs['box'].set_pos(x, y)
 
     def key_down(self, symbol, modifiers):
         if symbol == _win.key.ENTER:
-            self.exit()
+            self.focus_off()
         elif symbol == _win.key.BACKSPACE:
             if len(self.input) > 0:
                 self.input = self.input[:-1]
@@ -255,7 +361,7 @@ class Field(GuiObj):
             return '%s: %s' % (self.name, str(self.valobj))
 
     def update_label(self):
-        self._label.set_text(self.get_label_text())
+        self.guiobjs['label'].set_text(self.get_label_text())
 
     def update_color(self):
         parsed = self.valobj.parse(self.input)
@@ -271,20 +377,19 @@ class Field(GuiObj):
         self.render()
 
     def render(self):
-        self._clear()
         self.update_label()
         if self.is_focus:
             if self.input_valid:
-                self._box.set_color(80, 150, 80)
+                self.guiobjs['box'].set_color(80, 150, 80)
             elif self.input_accepted:
-                self._box.set_color(80, 80, 150)
+                self.guiobjs['box'].set_color(80, 80, 150)
             else:
-                self._box.set_color(150, 50, 50)
+                self.guiobjs['box'].set_color(150, 50, 50)
         elif self.is_hover:
-            self._box.set_color(120, 120, 120)
+            self.guiobjs['box'].set_color(120, 120, 120)
         else:
-            self._box.set_color(90, 90, 90)
-        self._box.render()
+            self.guiobjs['box'].set_color(90, 90, 90)
+        self.flush()
 
 
 class NumberField(Field):
@@ -323,76 +428,7 @@ class ComplexField(NumberField):
         super().__init__(x, y, w, h, name, valobj, batch)
 
 
-class Button(GuiObj):
-    def __init__(self, x, y, w, h, text, batch, action=None):
-        super().__init__(x, y, w, h, batch, True)
-        self.action = action
-        self._text = text
-        self._label = Label(x, y, text, batch)
-        self._box = Box(x, y, w, h, batch, color=(90, 90, 90))
-
-    def set_pos(self, x, y):
-        super().set_pos(x, y)
-        self._label.set_pos(x, y)
-
-    def set_visible(self, visible):
-        super().set_visible(visible)
-        if visible:
-            self.set_text(self._text)
-        else:
-            self.set_text('')
-
-    def mouse_up(self, *args, **kwargs):
-        if self.action:
-            self.action(*args, **kwargs)
-
-    def set_text(self, text):
-        self._label.set_text(text)
-
-    def render(self):
-        self._clear()
-        if self.is_focus:
-            self._box.set_color(150, 150, 150)
-        elif self.is_hover:
-            self._box.set_color(120, 120, 120)
-        else:
-            self._box.set_color(90, 90, 90)
-        self._box.render()
-
-
-class ToggleButton(Button):
-    def __init__(self, x, y, w, h, text, boolval, batch):
-        self.boolval = boolval
-        super().__init__(x, y, w, h, text, batch, action=self.toggle)
-
-    def toggle(self):
-        self.boolval.toggle()
-        self.render()
-
-    def set_pos(self, x, y):
-        super().set_pos(x, y)
-        self._label.set_pos(x, y)
-
-    def render(self):
-        self._clear()
-        if self.boolval.value:
-            if self.is_focus:
-                self._box.set_color(50, 150, 50)
-            elif self.is_hover:
-                self._box.set_color(30, 120, 30)
-            else:
-                self._box.set_color(10, 90, 10)
-        else:
-            if self.is_focus:
-                self._box.set_color(150, 50, 50)
-            elif self.is_hover:
-                self._box.set_color(120, 30, 30)
-            else:
-                self._box.set_color(90, 10, 10)
-        self._box.render()
-
-
-class Slider(GuiObj):
+class Slider(GuiComp):
     def __init__(self, x, y, w, h, offs, field_name, valobj, low, high, batch):
         super().__init__(x, y, w, h, batch, True)
         self.offs = offs
@@ -401,13 +437,13 @@ class Slider(GuiObj):
         self.low = low
         self.high = high
         self._slider_pos = (valobj.value - low) / (high - low)
-        self._label = Label(x, y, self.get_label_text(), batch)
-        self._box = Box(x, y, w, h, batch, color=(90, 90, 90))
-        self._bar = Box(x + self._slider_pos * w + offs, y, 2, h, batch, color=(240, 0, 240))
+        self.add_label('label', x, y, self.get_label_text(), batch)
+        self.add_box('box', x, y, w, h, batch, color=(90, 90, 90))
+        self.add_box('bar', x + self._slider_pos * w + offs, y, 2, h, batch, color=(240, 0, 240))
 
     def update_pos(self):
         self._slider_pos = (self.valobj.value - self.low) / (self.high - self.low)
-        self._label.set_text(self.get_label_text())
+        self.guiobjs['label'].set_text(self.get_label_text())
         self.render()
 
     def get_label_text(self):
@@ -417,16 +453,14 @@ class Slider(GuiObj):
         return self.x <= x < self.x + self.w + self.offs and self.y <= y < self.y + self.h
 
     def render(self):
-        self._clear()
         if self.is_focus:
-            self._box.set_color(150, 150, 150)
+            self.guiobjs['box'].set_color(150, 150, 150)
         elif self.is_hover:
-            self._box.set_color(120, 120, 120)
+            self.guiobjs['box'].set_color(120, 120, 120)
         else:
-            self._box.set_color(90, 90, 90)
-        self._box.render()
-        self._bar.set_pos(self.x + self._slider_pos * self.w + self.offs, self.y)
-        self._bar.render()
+            self.guiobjs['box'].set_color(90, 90, 90)
+        self.guiobjs['bar'].set_pos(self.x + self._slider_pos * self.w + self.offs, self.y)
+        self.flush()
 
     def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         self._slider_pos = (x - self.offs) / self.w
@@ -436,7 +470,7 @@ class Slider(GuiObj):
             self._slider_pos = 1
         new_value = (self._slider_pos * (self.high - self.low)) + self.low
         self.valobj.set_val_cast(new_value)
-        self._label.set_text(self.get_label_text())
+        self.guiobjs['label'].set_text(self.get_label_text())
         self.render()
 
 
@@ -452,6 +486,3 @@ class FloatSlider(Slider):
         if type(valobj) is not FloatValue:
             raise TypeError('Value object is not FloatValue!')
         super().__init__(x, y, w, h, offs, field_name, valobj, low, high, batch)
-
-
-__imports__ = (GuiObj, Label, Box,)

@@ -9,7 +9,6 @@ window:
 TODO:
 status line at bottom?
 let opengl do graphscreen zoom? test speeds
-fix gui obj inheritance tree
 """
 
 
