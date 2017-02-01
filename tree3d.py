@@ -18,27 +18,28 @@ class Screen3D(pyg.screen.Screen3D):
             dist = 100
             ratio = 3/4
             seeds = []
+            dir = ~(Vector(0, 0, 1).rotate(v_zero(3), v_i, 0))
             if iter:
-                self.add_line(0, 0, 0, 0, 0, dist)
-                seeds.append((Vector(0, 0, dist), v_k))
+                self.add_line(0, 0, 0, *(dir * dist))
+                seeds.append(((dir * dist), dir))
             for i in range(0, iter):
                 dist *= ratio
                 new_seeds = []
                 for v, d in seeds:
                     v1 = d * dist
-                    v1.rotate(v_zero(3), v_i, -30 + 10 * random() - 2)
+                    v1.rotate(v_zero(3), v_i, -90)
                     d1 = ~v1
                     v1 += v
                     self.add_line(*v, *v1)
                     new_seeds.append((v1, d1))
                     v2 = d * dist
-                    v2.rotate(v_zero(3), ~Vector(-1, 3 ** .5, 0), -30 + 10 * random() - 2)
+                    v2.rotate(v_zero(3), ~Vector(-1, 3 ** .5, 0), -90)
                     d2 = ~v2
                     v2 += v
                     self.add_line(*v, *v2)
                     new_seeds.append((v2, d2))
                     v3 = d * dist
-                    v3.rotate(v_zero(3), ~Vector(-1, -(3 ** .5), 0), -30 + 10 * random() - 2)
+                    v3.rotate(v_zero(3), ~Vector(-1, -(3 ** .5), 0), -90)
                     d3 = ~v3
                     v3 += v
                     self.add_line(*v, *v3)

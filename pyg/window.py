@@ -4,15 +4,39 @@ import pyglet.window as _win
 
 from pyglet.gl import *
 
+from math import floor as _floor
+
 from .gui import *
 from .valset import *
 
 
 class Window(_win.Window):
-    def __init__(self, width=600, height=600, caption='Window Caption', bg=(0, 0, 0, 1), *args, **kwargs):
+    """
+    Base window class. Holds all parts of the gui and all the screens.
+
+    :var width: width
+    :var height: height
+    """
+
+    def __init__(self, width=600, height=600, caption='Window Caption', bg=(0, 0, 0), ticktime=0, *args, **kwargs):
+        """
+        Window constructor.
+
+        :type width: int
+        :param width: width
+        :type height: int
+        :param height: height
+        :type caption: str
+        :param caption: caption
+        :type bg: list(int * 3)
+        :param bg: background color
+        :type ticktime: float
+        :param ticktime: interval between ticks in seconds, zero to disable ticking
+        """
         super().__init__(width=width, height=height, caption=caption, *args, **kwargs)
         self.set_minimum_size(width, height)
-        glClearColor(*bg)
+
+        glClearColor(*[_floor(color % 256) / 255 for color in bg], 1)
 
         self._batch = _graphics.Batch()
         self.screens = {}
@@ -28,7 +52,10 @@ class Window(_win.Window):
 
         self.set_vars()
         self.update_labels()
-        _clock.schedule_interval(self.tick, 0.1)
+
+        self.ticktime = ticktime
+        if ticktime > 0:
+            _clock.schedule_interval(self.tick, ticktime)
 
     # region add gui components
     def add_screen(self, name, screen):
@@ -87,16 +114,43 @@ class Window(_win.Window):
         self.valset.add_bool_value(name, value)
 
     def get_val(self, name):
+        """
+        Returns a value from the value set.
+
+        :type name: str
+        :param name: the value's name
+        :return: the value
+        """
         return self.valset.get_val(name)
 
     def set_val(self, name, new_value):
+        """
+        Sets a value to a new value.
+
+        :type name: str
+        :param name: the value's name
+        :param new_value: a new value
+        """
         self.valset.set_val(name, new_value)
 
     def get_valobj(self, name):
+        """
+        Returns a value object from the value set.
+
+        :type name: str
+        :param name: the value's name
+        :rtype: Value
+        :return: the corresponding value object
+        """
         return self.valset.get_valobj(name)
     # endregion
 
     def draw(self):
+        """
+        Called by on_draw().
+        Draws all the batches to the screen.
+        Should not be overridden.
+        """
         self.update_labels()
         self.clear()
         for screen in self.screens.values():
@@ -107,9 +161,15 @@ class Window(_win.Window):
         glLoadIdentity()
         glOrtho(0, self.width, 0, self.height, -10, 10)
         glMatrixMode(GL_MODELVIEW)
+        #glEnable(GL_DEPTH_TEST)
         self._batch.draw()
+        #glDisable(GL_DEPTH_TEST)
 
     def render(self):
+        """
+        Renders all the gui components and screens.
+        Should not be overridden.
+        """
         for screen in self.screens.values():
             if screen.visible:
                 screen.render()
@@ -121,15 +181,15 @@ class Window(_win.Window):
         for slider in self.sliders.values():
             slider.render()
 
+    # overriding base methods
+    def on_draw(self):
+        self.draw()
+
     def on_resize(self, width, height):
         super().on_resize(width, height)
         for screen in self.screens.values():
             screen.on_resize(width, height)
         self.render()
-
-    # overriding base methods
-    def on_draw(self):
-        self.draw()
 
     def on_mouse_motion(self, x, y, dx, dy):
         self.mouse_move(x, y, dx, dy)
@@ -154,6 +214,11 @@ class Window(_win.Window):
 
     # for subclasses
     def mouse_move(self, x, y, dx, dy):
+        """
+        Called when the mouse moves.
+        Should be called if overridden.
+        Refer to pyglet for documentation.
+        """
         for screen in self.screens.values():
             if screen.active:
                 screen.mouse_move(x - screen.x, y - screen.y, dx, dy)
@@ -180,6 +245,11 @@ class Window(_win.Window):
                 self.hover = None
 
     def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        """
+        Called when the mouse is dragged.
+        Should be called if overridden.
+        Refer to pyglet for documentation.
+        """
         if self.hover:
             self.hover.hover_off()
             self.hover = None
@@ -192,6 +262,11 @@ class Window(_win.Window):
                 self.render()
 
     def mouse_down(self, x, y, buttons, modifiers):
+        """
+        Called when the a mouse button is pressed.
+        Should be called if overridden.
+        Refer to pyglet for documentation.
+        """
         self.mouse = True
         if self.hover:
             self.hover.hover_off()
@@ -224,27 +299,36 @@ class Window(_win.Window):
                     return
 
     def mouse_up(self, x, y, buttons, modifiers):
+        """
+        Called when a mouse button is released.
+        Should be called if overridden.
+        Refer to pyglet for documentation.
+        """
         self.mouse = False
         if self.hover:
             self.hover.hover_off()
             self.hover = None
-        for screen in self.screens.values():
-            if screen.active and screen.is_inside(x, y):
-                screen.mouse_up(x - screen.x, y - screen.y, buttons, modifiers)
-                return
         if self.focus:
             if isinstance(self.focus, Slider):
                 self.focus.focus_off()
                 self.focus = None
-                return
             elif isinstance(self.focus, Button):
                 self.focus.focus_off()
                 if self.focus.is_inside(x, y):  # and self.focus.active:
                     self.focus.mouse_up()
                 self.focus = None
+            return
+        for screen in self.screens.values():
+            if screen.active and screen.is_inside(x, y):
+                screen.mouse_up(x - screen.x, y - screen.y, buttons, modifiers)
                 return
 
     def key_down(self, symbol, modifiers):
+        """
+        Called when a key is pressed.
+        Should be called if overridden.
+        Refer to pyglet for documentation.
+        """
         if self.focus:
             self.focus.key_down(symbol, modifiers)
             if symbol == _win.key.ENTER:
@@ -256,11 +340,21 @@ class Window(_win.Window):
                     screen.key_down(symbol, modifiers)
 
     def key_up(self, symbol, modifiers):
+        """
+        Called when a key is released.
+        Should be called if overridden.
+        Refer to pyglet for documentation.
+        """
         for screen in self.screens.values():
             if screen.active:
                 screen.key_up(symbol, modifiers)
 
     def text_input(self, text):
+        """
+        Called when text is entered.
+        Should be called if overridden.
+        Refer to pyglet for documentation.
+        """
         if self.focus:
             self.focus.text_input(text)
 
@@ -269,9 +363,19 @@ class Window(_win.Window):
             if screen.active:
                 screen.tick()
 
-    # to be overriden
+    # to be overridden
     def set_vars(self):
+        """
+        Called by the constructor.
+        All gui and value set objects should be added here.
+        Should be overridden.
+        """
         pass
 
     def update_labels(self):
+        """
+        Called before every draw.
+        Labels and other gui components should be updated here.
+        Should be overridden.
+        """
         pass

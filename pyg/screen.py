@@ -6,14 +6,24 @@ from pyglet.gl import *
 
 class Screen:
     """
-    A base screen class
+    Base screen class for drawing things.
+
+    :var x: x coord
+    :var y: y coord
+    :var w: width
+    :var h: height
+    :var valset: parent window's value set
+    :var bg: background color
+    :var visible: if the screen is drawn
+    :var active: if the screen is updated
     """
 
     _vertex_types = ('points', 'lines', 'line_strip', 'triangles', 'quads')
 
     def __init__(self, x, y, width, height, valset, bg=(255, 255, 255), visible=True, active=True):
         """
-        Screen initializer
+        Screen constructor.
+
         :type x: int
         :param x: x coord
         :type y: int
@@ -22,13 +32,16 @@ class Screen:
         :param width: width
         :type height: int
         :param height: height
-        :type valset: pyg.valset.Valset
+        :type valset: ValSet
         :param valset: the window's value set
-        :type bg: tuple (rgb, length 3)
-        :param bg:
-        :param visible:
-        :param active:
+        :type bg: list(int * 3)
+        :param bg: background color
+        :type visible: bool
+        :param visible: determines if the screen is drawn
+        :type active: bool
+        :param active: determines if the screen is updated
         """
+
         self.x = x
         self.y = y
         self.w = width
@@ -57,10 +70,12 @@ class Screen:
     # region visible and active set functions
     def set_visible(self, visible):
         """
-        Sets screen.visible
-        if True, renders the screen
-        if False, deletes the screen's vertex lists
-        :param visible: bool
+        Sets the screen's visible attribute.
+        If True, renders the screen.
+        If False, unrenders the screen.
+
+        :type visible: bool
+        :param visible: visible
         """
         self.visible = visible
         if visible:
@@ -73,22 +88,24 @@ class Screen:
 
     def set_active(self, active):
         """
-        Sets screen.active
-        Window will call screen.tick if the screen is active
-        :param active: bool
+        Sets the screen's active attribute.
+        The screen is updated when screen.active is True.
+
+        :type active: bool
+        :param active: active
         """
         self.active = active
 
     def on(self):
         """
-        Calls set_visible and set_active with True
+        Calls set_visible and set_active with True.
         """
         self.set_active(True)
         self.set_visible(True)
 
     def off(self):
         """
-        Calls set_visible and set_active with False
+        Calls set_visible and set_active with False.
         """
         self.set_active(False)
         self.set_visible(False)
@@ -97,35 +114,61 @@ class Screen:
     # region valset functions
     def get_val(self, name):
         """
-        Returns a value from the valset
-        :param name: value's name
-        :return: value
+        Returns a value from the value set.
+
+        :type name: str
+        :param name: the value's name
+        :return: the value
         """
         return self.valset.get_val(name)
 
     def set_val(self, name, new_value):
         """
-        Sets a value to a new value
-        :param name: value's name
-        :param new_value: new value
+        Sets a value to a new value.
+
+        :type name: str
+        :param name: the value's name
+        :param new_value: a new value
         """
         self.valset.set_val(name, new_value)
 
-    def get_obj(self, name):
+    def get_valobj(self, name):
         """
-        Returns a valobj from the valset
-        :param name: valobj's name
-        :return: valobj
+        Returns a value object from the value set.
+
+        :type name: str
+        :param name: the value's name
+        :rtype: Value
+        :return: the corresponding value object
         """
-        return self.valset.get_obj(name)
+        return self.valset.get_valobj(name)
     # endregion
 
     # region vertex set functions
     def set_points(self, vertexes, colors):
+        """
+        Sets the vertex and color arrays for points.
+        Vertexes and colors must be the same length.
+
+        :type vertexes: list(float)
+        :param vertexes: flattened list of 3d vectors
+        :type colors: list(float)
+        :param colors: flattened list of rgb colors
+        """
         self._vertexes['points'] = vertexes
         self._colors['points'] = colors
 
     def set_lines(self, vertexes, colors):
+        """
+        Sets the vertex and color arrays for lines.
+        Vertexes and colors must be the same length.
+        Length of vertexes must be divisible by 2.
+
+        :type vertexes: list(float)
+        :param vertexes: flattened list of 3d vectors
+        :type colors: list(float)
+        :param colors: flattened list of rgb colors
+        """
         self._vertexes['lines'] = vertexes
         self._colors['lines'] = colors
 
@@ -134,10 +177,30 @@ class Screen:
         self._colors['line_strip'] = colors
 
     def set_triangles(self, vertexes, colors):
+        """
+        Sets the vertex and color arrays for triangles.
+        Vertexes and colors must be the same length.
+        Length of vertexes must be divisible by 3.
+
+        :type vertexes: list(float)
+        :param vertexes: flattened list of 3d vectors
+        :type colors: list(float)
+        :param colors: flattened list of rgb colors
+        """
         self._vertexes['triangles'] = vertexes
         self._colors['triangles'] = colors
 
     def set_quads(self, vertexes, colors):
+        """
+        Sets the vertex and color arrays for quads.
+        Vertexes and colors must be the same length.
+        Length of vertexes must be divisible by 4.
+
+        :type vertexes: list(float)
+        :param vertexes: flattened list of 3d vectors
+        :type colors: list(float)
+        :param colors: flattened list of rgb colors
+        """
         self._vertexes['quads'] = vertexes
         self._colors['quads'] = colors
     # endregion
@@ -164,9 +227,9 @@ class Screen:
 
     def flush(self):
         """
-        Deletes the current vertex lists
-        If the screen is visible, adds the vertexes in the buffer to the batch
-        Clears the buffer
+        If the screen is visible, adds the vertexes in the buffer to the batch.
+        Then deletes the current vertex lists.
+        Should not be overridden.
         """
         for vtype in self._vertex_types:
             if self._vertex_lists[vtype]:
@@ -198,7 +261,7 @@ class Screen:
 
     def _clear(self):
         """
-        Clears the buffer arrays
+        Clears the buffer arrays.
         """
         for vtype in self._vertex_types:
             self._vertexes[vtype] = []
@@ -206,45 +269,98 @@ class Screen:
 
     def draw(self):
         """
-        Draws its batch
+        Draws the batch.
+        Should not be overridden.
         """
         self._batch.draw()
 
     # region to be overridden functions
     def render(self):
+        """
+        Renders the screen.
+        All calls to add points, lines, etc. should be here.
+        self.flush() must be called at the end.
+        Should be overridden.
+        """
         pass
 
     def mouse_move(self, x, y, dx, dy):
+        """
+        Called when the mouse moves.
+        Can be overridden.
+        Refer to pyglet for documentation.
+        """
         pass
 
     def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        """
+        Called when the mouse is dragged.
+        Can be overridden.
+        Refer to pyglet for documentation.
+        """
         pass
 
     def mouse_down(self, x, y, button, modifier):
+        """
+        Called when the a mouse button is pressed.
+        Can be overridden.
+        Refer to pyglet for documentation.
+        """
         pass
 
     def mouse_up(self, x, y, button, modifiers):
+        """
+        Called when a mouse button is released.
+        Can be overridden.
+        Refer to pyglet for documentation.
+        """
         pass
 
     def key_down(self, symbol, modifiers):
+        """
+        Called when a key is pressed.
+        Can be overridden.
+        Refer to pyglet for documentation.
+        """
         pass
 
     def key_up(self, symbol, modifiers):
+        """
+        Called when a key is released.
+        Can be overridden.
+        Refer to pyglet for documentation.
+        """
         pass
 
     def tick(self):
+        """
+        Called by the window's tick function.
+        Can be overridden.
+        """
         pass
 
     def resize(self, width, height):
+        """
+        Called when the window is resized.
+        The screen's position and dimensions should be updated here.
+
+        :type width: int
+        :param width: window width
+        :type height: int
+        :param height: window height
+        """
         pass
     # endregion
 
     def is_inside(self, x, y):
         """
         Returns if (x, y) is inside the screen
+
+        :type x: int
         :param x: x
+        :type y: int
         :param y: y
-        :return: if the point is inside the screen
+        :rtype: bool
         """
         return 0 <= x - self.x < self.w and 0 <= y - self.y < self.h
 
@@ -257,15 +373,48 @@ class Screen:
     def set_pos(self, x, y):
         """
         Sets the screen's position
+
+        :type x: int
         :param x: x
+        :type y: int
         :param y: y
         """
         self.x = x
         self.y = y
 
+    def set_size(self, width, height):
+        """
+        Sets the screen's dimensions
+
+        :type w: int
+        :param w: width
+        :type h: int
+        :param h: height
+        :return:
+        """
+        self.w = width
+        self.h = height
+
 
 class Screen2D(Screen):
+    """
+    A 2D implementation of Screen.
+
+    :var x: screen's x coord
+    :var y: screen's y coord
+    :var w: screen's width
+    :var h: screen's height
+    :var valset: parent window's value set
+    :var bg: screen's background color
+    :var visible: if the screen is drawn
+    :var active: if the screen is updated
+    """
+
     def draw(self):
+        """
+        Draws the batch in glOrtho perspective.
+        Should not be overridden.
+        """
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         glOrtho(0, self._ww, 0, self._wh, -1001, 1001)
@@ -286,6 +435,12 @@ class Screen2D(Screen):
         glDisable(GL_DEPTH_TEST)
 
     def set_bg(self, color):
+        """
+        Sets the background color.
+
+        :type color: list(int * 3)
+        :param color: background color
+        """
         if self._vertex_lists['bg']:
             self._vertex_lists['bg'].delete()
         vlist = self._batch.add(4, GL_QUADS, None,
@@ -295,18 +450,83 @@ class Screen2D(Screen):
         self._vertex_lists['bg'] = vlist
 
     def add_point(self, x, y, z=0, color=(0, 0, 0)):
+        """
+        Adds a point to be drawn.
+
+        :type x: float
+        :param x: x
+        :type y: float
+        :param y: y
+        :type z: float
+        :param z: z
+        :type color: list(int * 3)
+        :param color: color
+        """
         self._vertexes['points'].extend((x, y, z))
         self._colors['points'].extend(color)
 
     def add_points(self, points, colors):
+        """
+        Adds a list of points to be drawn.
+        Points and colors must be the same length.
+
+        :type points: list(float)
+        :param points: flattened list of 3d vectors
+        :type colors: list(int)
+        :param colors: flattened list of rgb colors
+        """
+        if len(points) != len(colors):
+            raise IndexError('Points and colors must have same length!')
         self._vertexes['points'].extend(points)
         self._colors['points'].extend(colors)
 
     def add_line(self, x1, y1, x2, y2, z=0, color=(0, 0, 0)):
+        """
+        Adds a line to be drawn.
+
+        :type x1: float
+        :param x1: x1
+        :type y1: float
+        :param y1: y1
+        :type x2: float
+        :param x2: x2
+        :type y2: float
+        :param y2: y2
+        :type z: float
+        :param z: z
+        :type color: list(int * 3)
+        :param color: color
+        """
         self._vertexes['lines'].extend((x1, y1, z, x2, y2, z))
         self._colors['lines'].extend(color * 2)
 
     def add_triangle(self, x1, y1, x2, y2, x3, y3, z=0, color=(0, 0, 0), uniform=True, colors=([0] * 9)):
+        """
+        Adds a triangle to be drawn.
+        If uniform, draws using color argument.
+        If non-uniform, draws using colors argument.
+
+        :type x1: float
+        :param x1: x1
+        :type y1: float
+        :param y1: y1
+        :type x2: float
+        :param x2: x2
+        :type y2: float
+        :param y2: y2
+        :type x3: float
+        :param x3: x3
+        :type y3: float
+        :param y3: y3
+        :type z: float
+        :param z: z
+        :type color: list(int * 3)
+        :param color: color
+        :type uniform: bool
+        :param uniform: uniform coloring
+        :type colors: list(int * 9)
+        :param colors: non-uniform colors
+        """
         self._vertexes['triangles'].extend((x1, y1, z, x2, y2, z, x3, y3, z))
         if uniform:
             self._colors['triangles'].extend(color * 3)
@@ -314,6 +534,36 @@ class Screen2D(Screen):
             self._colors['triangles'].extend(colors)
 
     def add_quad(self, x1, y1, x2, y2, x3, y3, x4, y4, z=0, color=(0, 0, 0), uniform=True, colors=([0] * 12)):
+        """
+        Adds a quadrilateral to be drawn.
+        If uniform, draws using color argument.
+        If non-uniform, draws using colors argument.
+
+        :type x1: float
+        :param x1: x1
+        :type y1: float
+        :param y1: y1
+        :type x2: float
+        :param x2: x2
+        :type y2: float
+        :param y2: y2
+        :type x3: float
+        :param x3: x3
+        :type y3: float
+        :param y3: y3
+        :type x4: float
+        :param x4: x4
+        :type y4: float
+        :param y4: y4
+        :type z: float
+        :param z: z
+        :type color: list(int * 3)
+        :param color: color
+        :type uniform: bool
+        :param uniform: uniform coloring
+        :type colors: list(int * 12)
+        :param colors: non-uniform colors
+        """
         self._vertexes['quads'].extend((x1, y1, z, x2, y2, z, x3, y3, z, x4, y4, z))
         if uniform:
             self._colors['quads'].extend(color * 4)
@@ -322,13 +572,63 @@ class Screen2D(Screen):
 
 
 class GraphScreen(Screen2D):
+    """
+    An implementation of Screen2D with zoom.
+
+    :var x: screen's x coord
+    :var y: screen's y coord
+    :var w: screen's width
+    :var h: screen's height
+    :var valset: parent window's value set
+    :var bg: screen's background color
+    :var visible: if the screen is drawn
+    :var active: if the screen is updated
+    :var gx: graph's center x coord
+    :var gy: graph's center y coord
+    :var gw: graph's width
+    :var gh: graph's height
+    :var min_gx: graph's minimum gx drawn
+    :var max_gx: graph's maximum gx drawn
+    :var min_gy: graph's minimum gy drawn
+    :var max_gy: graph's maximum gy drawn
+    """
     def __init__(self, x, y, width, height, gx, gy, gw, gh, valset, zoom_valobj, bg=(255, 255, 255), visible=True, active=True):
+        """
+        GraphScreen constructor.
+
+        :type x: int
+        :param x: x coord
+        :type y: int
+        :param y: y coord
+        :type width: int
+        :param width: width
+        :type height: int
+        :param height: height
+        :type gx: float
+        :param gx: graph center x coord
+        :type gy: float
+        :param gy: graph center y coord
+        :type gw: float
+        :param gw: graph width
+        :type gh: float
+        :param gh: graph height
+        :type valset: ValSet
+        :param valset: the window's value set
+        :type zoom_valobj: Value
+        :param zoom_valobj: the zoom ratio value object
+        :type bg: list(int * 3)
+        :param bg: background color
+        :type visible: bool
+        :param visible: determines if the screen is drawn
+        :type active: bool
+        :param active: determines if the screen is updated
+        """
         super().__init__(x, y, width, height, valset, bg, visible, active)
         # original width / height
         self._ow = width
         self._oh = height
         self.set_graph_coords(gx, gy, gw, gh)
-        self.set_graph_minmax()
+        self._set_graph_minmax()
         self.reset_to(gx, gy, gw, gh)
 
         self.zoom_valobj = zoom_valobj
@@ -338,10 +638,7 @@ class GraphScreen(Screen2D):
         self.offsx = 0
         self.offsy = 0
 
-    def set_graph_minmax(self):
-        """
-        Sets the min/max x and y coordinates on the graph
-        """
+    def _set_graph_minmax(self):
         self.min_gx = self.gx - self.gw / 2
         self.max_gx = self.gx + self.gw / 2
         self.min_gy = self.gy - self.gh / 2
@@ -349,29 +646,35 @@ class GraphScreen(Screen2D):
 
     def reset_screen(self):
         """
-        Resets the graph and renders the screen
+        Resets the graph to its original view and renders the screen.
         """
         self.reset_graph()
-        self.total_zoom = 1
         self.render()
 
     def reset_graph(self):
         """
-        Resets the graph to its original coordinates
+        Only resets the graph to its original view. Does not render the screen.
+        :return:
         """
         self.gx = self._ogx
         self.gy = self._ogy
         self.gw = self._ogw * (self.w / self._ow)
         self.gh = self._ogh * (self.h / self._oh)
-        self.set_graph_minmax()
+        self._set_graph_minmax()
+        self.total_zoom = 1
 
     def reset_to(self, gx, gy, gw, gh):
         """
-        Changes the coordinates the graph resets to
-        :param gx: reset graph x
-        :param gy: reset graph y
-        :param gw: reset graph width
-        :param gh: reset graph height
+        Changes the graph coordinates the graph resets to.
+
+        :type gx: float
+        :param gx: graph center x
+        :type gy: float
+        :param gy: graph center y
+        :type gw: float
+        :param gw: graph width
+        :type gh: float
+        :param gh: graph height
         """
         self._ogx = gx
         self._ogy = gy
@@ -379,12 +682,34 @@ class GraphScreen(Screen2D):
         self._ogh = gh
 
     def set_graph_coords(self, gx, gy, gw, gh):
+        """
+        Sets the graph coordinates.
+
+        :type gx: float
+        :param gx: graph center x
+        :type gy: float
+        :param gy: graph center y
+        :type gw: float
+        :param gw: graph width
+        :type gh: float
+        :param gh: graph height
+        """
         self.gx = gx
         self.gy = gy
         self.gw = gw
         self.gh = gh
 
     def set_graph_view(self, gx, gy, zoom):
+        """
+        Sets the graph coordinates given the center and a zoom with respect to the original coordinates.
+
+        :type gx: float
+        :param gx: graph center x
+        :type gy: float
+        :param gy: graph center y
+        :type zoom: float
+        :param zoom: graph zoom
+        """
         self.gx = gx
         self.gy = gy
         self.total_zoom = zoom
@@ -394,24 +719,31 @@ class GraphScreen(Screen2D):
 
     def resize(self, width, height):
         """
-        Resizes the screen based on the window's new width and height
-        Should be overridden if screen does not take up entire window
-        :param width: new window width
-        :param height: new window height
+        Called when the window is resized.
+        The screen's position and dimensions should be updated here.
+        If overridden, should use self.refit(width, height) to set new dimensions.
+
+        :type width: int
+        :param width: window width
+        :type height: int
+        :param height: window height
         """
         self.refit(width, width)
 
     def refit(self, width, height):
         """
-        Sets the screen's width and height and changes the graph's width and height accordingly
+        Refits the screen and graph to a given dimension.
+
+        :type width: int
         :param width: new screen width
+        :type height: int
         :param height: new screen height
         """
         old_gw = self.gw
         old_gh = self.gh
         self.gw *= width / self.w
         self.gh *= height / self.h
-        self.set_graph_minmax()
+        self._set_graph_minmax()
         self.total_zoom *= (old_gw * old_gh) / (self.gw * self.gh)
         self.w = width
         self.h = height
@@ -422,7 +754,7 @@ class GraphScreen(Screen2D):
         Moves the graph center up
         """
         self.gy += self.gh / 5
-        self.set_graph_minmax()
+        self._set_graph_minmax()
         self.render()
 
     def down(self):
@@ -430,7 +762,7 @@ class GraphScreen(Screen2D):
         Moves the graph center down
         """
         self.gy -= self.gh / 5
-        self.set_graph_minmax()
+        self._set_graph_minmax()
         self.render()
 
     def left(self):
@@ -438,7 +770,7 @@ class GraphScreen(Screen2D):
         Moves the graph center left
         """
         self.gx -= self.gw / 5
-        self.set_graph_minmax()
+        self._set_graph_minmax()
         self.render()
 
     def right(self):
@@ -446,25 +778,33 @@ class GraphScreen(Screen2D):
         Moves the graph center right
         """
         self.gx += self.gw / 5
-        self.set_graph_minmax()
+        self._set_graph_minmax()
         self.render()
     # endregion
 
     def on_screen(self, x, y):
         """
-        Transforms a point on the graph to the corresponding point on the screen
-        :param x: graph x
-        :param y: graph y
-        :return: screen x, screen y
+        Transforms a point on the graph to the corresponding point on the screen.
+
+        :type x: float
+        :param x: x
+        :type y: float
+        :param y: y
+        :rtype: list(float * 2)
+        :return: the point on the screen
         """
         return (x - self.gx + self.gw / 2) * self.w / self.gw, (y - self.gy + self.gh / 2) * self.h / self.gh
 
     def on_plot(self, x, y):
         """
-        Transforms a point on the screen to the corresponding point on the graph
+        Transforms a point on the screen to the corresponding point on the graph.
+
+        :type x: float
         :param x: screen x
+        :type y: float
         :param y: screen y
-        :return: graph x, graph y
+        :rtype: list(float * 2)
+        :return: the point on the graph
         """
         return x * self.gw / self.w + self.gx - self.gw / 2, y * self.gh / self.h + self.gy - self.gh / 2
 
@@ -472,8 +812,6 @@ class GraphScreen(Screen2D):
         if self.drag:
             self.offsx = x - self.mdownx
             self.offsy = y - self.mdowny
-            #self._bg_group.offsx = -self.offsx
-            #self._bg_group.offsy = -self.offsy
 
     def mouse_down(self, x, y, button, modifier):
         if button == _win.mouse.MIDDLE:
@@ -487,7 +825,7 @@ class GraphScreen(Screen2D):
             self.gy = self.gy - self.gh / 2 + y * self.gh / self.h
             self.gw *= self.zoom_valobj.value
             self.gh *= self.zoom_valobj.value
-            self.set_graph_minmax()
+            self._set_graph_minmax()
             self.total_zoom *= (1 / self.zoom_valobj.value) ** 2
             #print('zoomed to %.5f,%.5f with size %.9f,%.9f' % (self.gx, self.gy, self.gw, self.gh))
         elif button == _win.mouse.RIGHT:
@@ -495,7 +833,7 @@ class GraphScreen(Screen2D):
             self.gy = self.gy - self.gh / 2 + y * self.gh / self.h
             self.gw /= self.zoom_valobj.value
             self.gh /= self.zoom_valobj.value
-            self.set_graph_minmax()
+            self._set_graph_minmax()
             self.total_zoom /= (1 / self.zoom_valobj.value) ** 2
             #print('zoomed to %.5f,%.5f with size %.9f,%.9f' % (self.gx, self.gy, self.gw, self.gh))
         elif button == _win.mouse.MIDDLE:
@@ -504,7 +842,7 @@ class GraphScreen(Screen2D):
             msx2, msy2 = self.on_plot(x, y)
             self.gx -= msx2 - msx1
             self.gy -= msy2 - msy1
-            self.set_graph_minmax()
+            self._set_graph_minmax()
             self.offsx = 0
             self.offsy = 0
         self.render()

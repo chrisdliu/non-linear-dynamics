@@ -2,10 +2,13 @@ from numbers import Number
 from math import cos, sin, pi
 
 
+__all__ = ['Vector']
+
+
 class Vector:
     def __init__(self, *args):
         """
-        Vector initialization.
+        Vector constructor.
 
         >>> a = Vector(1, 2, 3)
         >>> b = Vector(1+2j, 4-6j)
@@ -374,3 +377,5 @@ class Vector:
         self[0] = (a*(v*v+w*w)-u*(b*v+c*w-u*x-v*y-w*z))*(1-cos(theta))+x*cos(theta)+(-c*v+b*w-w*y+v*z)*sin(theta)
         self[1] = (b*(u*u+w*w)-v*(a*u+c*w-u*x-v*y-w*z))*(1-cos(theta))+y*cos(theta)+(c*u-a*w+w*x-u*z)*sin(theta)
         self[2] = (c*(u*u+v*v)-w*(a*u+b*v-u*x-v*y-w*z))*(1-cos(theta))+z*cos(theta)+(-b*u+a*v-v*x+u*y)*sin(theta)
+
+        return self

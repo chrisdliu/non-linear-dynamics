@@ -6,7 +6,7 @@ A module for vector math.
 __author__ = 'Christopher Liu'
 
 
-from .vector import Vector
+from .vector import *
 
 
 def v_zero(dim):
@@ -20,9 +20,9 @@ def v_zero(dim):
     """
     return Vector(*([0] * dim))
 
-#:
+
 v_i = Vector(1, 0, 0)
-#:
+
 v_j = Vector(0, 1, 0)
-#:
+
 v_k = Vector(0, 0, 1)

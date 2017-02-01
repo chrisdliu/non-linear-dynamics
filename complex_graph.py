@@ -37,10 +37,10 @@ class ComplexScreen(pyg.screen.GraphScreen):
     def key_down(self, symbol, modifiers):
         super().key_down(symbol, modifiers)
         if symbol == pyglet.window.key.K:
-            self.get_obj('n').incr()
+            self.get_valobj('n').incr()
             self.render()
         elif symbol == pyglet.window.key.J:
-            self.get_obj('n').decr()
+            self.get_valobj('n').decr()
             self.render()
 
     def resize(self, width, height):
