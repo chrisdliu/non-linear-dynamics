@@ -87,8 +87,8 @@ class NumberValue(Value):
         self.inclusive = inclusive
         self.low = low
         self.high = high
-        #if not self.is_valid(value):
-        #    raise ValueError('Initial value is not valid!')
+        if not self.is_valid(value):
+            raise ValueError('Initial value is not valid!')
 
     def incr(self):
         """
@@ -167,7 +167,7 @@ class FloatValue(NumberValue):
     def is_valid(self, new_value):
         if not isinstance(new_value, float):
             raise TypeError('New value must be a float!')
-        super().is_valid(new_value)
+        return super().is_valid(new_value)
 
 
 class ComplexValue(NumberValue):
