@@ -616,7 +616,7 @@ class GraphScreen(Screen2D):
         :param gh: graph height
         :type valset: ValSet
         :param valset: the window's value set
-        :type zoom_valobj: Value
+        :type zoom_valobj: FloatValue
         :param zoom_valobj: the zoom ratio value object
         :type bg: list(int * 3)
         :param bg: background color
