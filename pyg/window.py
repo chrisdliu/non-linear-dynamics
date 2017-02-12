@@ -16,6 +16,13 @@ class Window(_win.Window):
 
     :var width: width
     :var height: height
+    :var bg: background color
+    :var screens: dictionary of screens
+    :var buttons: dictionary of buttons
+    :var labels: dictionary of labels
+    :var fields: dictionary of fields
+    :var sliders: dictionary of sliders
+    :var valset: the window's valset
     """
 
     def __init__(self, width=600, height=600, caption='Window Caption', bg=(0, 0, 0), ticktime=0, *args, **kwargs):
@@ -37,6 +44,7 @@ class Window(_win.Window):
         self.set_minimum_size(width, height)
 
         glClearColor(*[_floor(color % 256) / 255 for color in bg], 1)
+        self.bg = bg
 
         self._batch = _graphics.Batch()
         self.screens = {}
@@ -57,11 +65,62 @@ class Window(_win.Window):
         if ticktime > 0:
             _clock.schedule_interval(self.tick, ticktime)
 
+    def set_vars(self):
+        """
+        Called by the constructor.
+        All gui and value set objects should be added here.
+        Should be overridden.
+        """
+        pass
+
+    def update_labels(self):
+        """
+        Called before every draw.
+        Labels and other gui components should be updated here.
+        Should be overridden.
+        """
+        pass
+
+    def set_bg(self, bg):
+        """
+        Sets the background color.
+
+        :type bg: list(int * 3)
+        :param bg: background color
+        """
+        glClearColor(*[_floor(color % 256) / 255 for color in bg], 1)
+        self.bg = bg
+
+    def tick(self, dt):
+        for screen in self.screens.values():
+            if screen.active:
+                screen.tick()
+
     # region add gui components
     def add_screen(self, name, screen):
+        """
+        Adds a screen.
+
+        :type name: str
+        :param name: name
+        :type screen: Screen(subclass)
+        :param screen: a screen
+        """
         self.screens[name] = screen
 
     def add_button(self, name, x, y, w, h, text, action=None):
+        """
+        Adds a button.
+
+        :param name:
+        :param x:
+        :param y:
+        :param w:
+        :param h:
+        :param text:
+        :param action:
+        :return:
+        """
         self.buttons[name] = Button(x, y, w, h, text, self._batch, action=action)
 
     def add_toggle_button(self, name, x, y, w, h, text, boolval):
@@ -357,25 +416,3 @@ class Window(_win.Window):
         """
         if self.focus:
             self.focus.text_input(text)
-
-    def tick(self, dt):
-        for screen in self.screens.values():
-            if screen.active:
-                screen.tick()
-
-    # to be overridden
-    def set_vars(self):
-        """
-        Called by the constructor.
-        All gui and value set objects should be added here.
-        Should be overridden.
-        """
-        pass
-
-    def update_labels(self):
-        """
-        Called before every draw.
-        Labels and other gui components should be updated here.
-        Should be overridden.
-        """
-        pass

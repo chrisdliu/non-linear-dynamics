@@ -1,12 +1,12 @@
 """
-A module for vector math.
+A package for vector math.
 """
 
 
 __author__ = 'Christopher Liu'
 
 
-from .vector import *
+from .vmath import *
 
 
 def v_zero(dim):
@@ -21,8 +21,31 @@ def v_zero(dim):
     return Vector(*([0] * dim))
 
 
-v_i = Vector(1, 0, 0)
+def v_i():
+    """
+    Returns a unit vector along the x axis in 3 dimensions.
 
-v_j = Vector(0, 1, 0)
+    :rtype: Vector
+    :return: unit vector i
+    """
+    return Vector(1, 0, 0)
 
-v_k = Vector(0, 0, 1)
+
+def v_j():
+    """
+    Returns a unit vector along the y axis in 3 dimensions.
+
+    :rtype: Vector
+    :return: unit vector j
+    """
+    return Vector(0, 1, 0)
+
+
+def v_k():
+    """
+    Returns a unit vector along the z axis in 3 dimensions.
+
+    :rtype: Vector
+    :return: unit vector k
+    """
+    return Vector(0, 0, 1)

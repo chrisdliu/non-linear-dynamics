@@ -256,5 +256,5 @@ class LogisticWindow(pyg.window.Window):
         self.labels['bottomlabel'].set_text('%.5f' % self.get_screen('main').min_gy)
 
 
-window = LogisticWindow(width=600, height=800, caption='Logistics Graph', bg=(0, 0, 0, 1), resizable=True)
+window = LogisticWindow(width=600, height=800, caption='Logistics Graph', bg=(0, 0, 0, 1), resizable=True, ticktime=0.1)
 pyglet.app.run()

@@ -1,15 +1,19 @@
 """
-A graphics module using pyglet.
+A graphics package using pyglet.
 
 ORDERED GROUPS:
 1: buttons
 2: labels
 
 TODO:
+finish documentation.
 status line at bottom?
 let opengl do graphscreen zoom? test speeds
 move required functions into on_(action), change overridden functions to (action)
-remove visible from constructors
+Remove visible from constructors. ??? why ???
+3dscreen: maximum zoom conflict with background
+make gui, screen, valset, and window modules
+make sure mouse coordinates are consistent
 """
 
 
@@ -24,7 +28,7 @@ from . import window
 
 def run(WindowCls, width=500, height=700, caption='Caption Here', ticktime=0):
     """
-    Runs pyglet using a provided window class.
+    Runs pyglet using a provided Window subclass.
 
     :type WindowCls: Window
     :param WindowCls: a subclass of Window

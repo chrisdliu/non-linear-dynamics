@@ -2,7 +2,7 @@ from numbers import Number
 from math import cos, sin, pi
 
 
-__all__ = ['Vector']
+__all__ = ['Vector', 'Matrix']
 
 
 class Vector:
@@ -112,6 +112,13 @@ class Vector:
         x2 = -(self[0] * other[2] - self[2] * other[0])
         x3 = self[0] * other[1] - self[1] * other[0]
         return Vector(x1, x2, x3)
+
+    def __rmul__(self, other):
+        if not isinstance(other, Matrix):
+            raise TypeError('Must multiply by a matrix on the left!')
+        if other.dim[1] != self.dim:
+            raise ArithmeticError('Matrix columns must match vector dimension!')
+        return Vector(*[sum([other[x, y] * self[y] for y in range(self.dim)]) for x in range(other.dim[0])])
 
     def __floordiv__(self, other):
         """
@@ -281,11 +288,6 @@ class Vector:
             raise ArithmeticError('Vectors must be same dimension!')
         return abs(self) > abs(other)
 
-    def __setattr__(self, key, value):
-        if 'dim' in self.__dict__ and key is 'dim':
-            raise KeyError('Cannot modify a vector\'s dimension!')
-        super().__setattr__(key, value)
-
     def __getitem__(self, item):
         """
         Returns the number at a given index.
@@ -341,41 +343,149 @@ class Vector:
             raise StopIteration
 
     def __str__(self):
-        res = '(' + ', '.join(['{:d}' if isinstance(self[i], int) else '{:.2f}' for i in range(len(self))]) + ')'
-        return res.format(*self._data)
+        form = '(' + ', '.join(['{:d}' if isinstance(self[i], int) else '{:.2f}' for i in range(len(self))]) + ')'
+        return form.format(*self._data)
 
     def __repr__(self):
         return 'Vector' + str(self)
 
-    def rotate(self, trans, axis, theta):
-        """
-        Rotates the vector around an axis by theta degrees
+    def __setattr__(self, key, value):
+        if 'dim' in self.__dict__ and key is 'dim':
+            raise KeyError('Cannot modify a vector\'s dimension!')
+        super().__setattr__(key, value)
 
-        :type trans: Vector
-        :param trans: A point the axis passes through
-        :type axis: Vector
-        :param axis: Direction of axis (if not normalized, it will be normalized in calculation)
+    def rotate2d(self, theta, trans=None):
+        """
+        Rotates a 2d vector around a point by theta degrees
+
         :type theta: float
-        :param theta: Rotation amount in degrees
+        :param theta: rotation amount in degrees
+        :type trans: Vector(2d)
+        :param trans: the point of rotation
+        """
+        if self.dim != 2:
+            raise ArithmeticError('Vector must have dimension 2!!!')
+        if trans is not None and trans.dim != 2:
+            raise ArithmeticError('Translation vector must have dimension 2!!!')
+
+        theta *= pi / 180
+        st = sin(theta)
+        ct = cos(theta)
+        if trans:
+            self.__sub__(trans)
+        self[0], self[1] = [*(Matrix([ct, -st], [st, ct]) * self)]
+        if trans:
+            self.__add__(trans)
+
+        return self
+
+    def rotate3d(self, theta, axis, trans=None):
+        """
+        Rotates a 3d vector around an axis by theta degrees
+
+        :type theta: float
+        :param theta: rotation amount in degrees
+        :type axis: Vector(3d)
+        :param axis: direction of axis (if not normalized, it will be normalized in calculation)
+        :type trans: Vector(3d)
+        :param trans: a point on the axis
         """
         if self.dim != 3:
             raise ArithmeticError('Vector must have dimension 3!!!')
-        if trans.dim != 3:
-            raise ArithmeticError('Translation vector must have dimension 3!!!')
         if axis.dim != 3:
             raise ArithmeticError('Axis vector must have dimension 3!!!')
+        if trans is not None and trans.dim != 3:
+            raise ArithmeticError('Translation vector must have dimension 3!!!')
         # normalize axis vector
         if abs(axis) != 1:
             axis = ~axis
 
         theta *= pi / 180
         x, y, z = [*self]
-        a, b, c = [*trans]
+        if trans:
+            a, b, c = [*trans]
+        else:
+            a, b, c = 0, 0, 0
         u, v, w = [*axis]
+        cost = cos(theta)
+        sint = sin(theta)
 
         # lmao how does this work
-        self[0] = (a*(v*v+w*w)-u*(b*v+c*w-u*x-v*y-w*z))*(1-cos(theta))+x*cos(theta)+(-c*v+b*w-w*y+v*z)*sin(theta)
-        self[1] = (b*(u*u+w*w)-v*(a*u+c*w-u*x-v*y-w*z))*(1-cos(theta))+y*cos(theta)+(c*u-a*w+w*x-u*z)*sin(theta)
-        self[2] = (c*(u*u+v*v)-w*(a*u+b*v-u*x-v*y-w*z))*(1-cos(theta))+z*cos(theta)+(-b*u+a*v-v*x+u*y)*sin(theta)
+        self[0] = (a*(v*v+w*w)-u*(b*v+c*w-u*x-v*y-w*z))*(1-cost)+x*cost+(-c*v+b*w-w*y+v*z)*sint
+        self[1] = (b*(u*u+w*w)-v*(a*u+c*w-u*x-v*y-w*z))*(1-cost)+y*cost+(c*u-a*w+w*x-u*z)*sint
+        self[2] = (c*(u*u+v*v)-w*(a*u+b*v-u*x-v*y-w*z))*(1-cost)+z*cost+(-b*u+a*v-v*x+u*y)*sint
 
         return self
+
+
+class Matrix:
+    def __init__(self, *args):
+        if not args:
+            raise TypeError('Must supply arguments!')
+        for row in args:
+            if not isinstance(row, (list, tuple, Vector)):
+                raise TypeError('All arguments must be lists, tuples, or vectors!')
+            for x in row:
+                if not isinstance(x, Number):
+                    raise TypeError('All elements in arguments must be numbers!')
+        for i in range(1, len(args)):
+            if len(args[i - 1]) != len(args[i]):
+                raise IndexError('All arguments must have the same length!')
+
+        data = [list(row) for row in args]
+        self._data = data
+        self.dim = (len(data), len(data[0]))
+
+    def __mul__(self, other):
+        if isinstance(other, Vector):
+            return NotImplemented
+        if not isinstance(other, (Number, Matrix)):
+            raise TypeError('Must multiply by a number or matrix!')
+        if isinstance(other, Number):
+            return Matrix(*[[self[x, y] * other for y in range(self.dim[1])] for x in range(self.dim[0])])
+
+    def __getitem__(self, item):
+        """
+        :type item: int, list(int * 2), tuple(int * 2)
+        :rtype: list(Number * dim[1]), int
+        """
+        if isinstance(item, int):
+            return self._data[item]
+        elif isinstance(item, (list, tuple)) and len(item) == 2 and isinstance(item[0], int) and isinstance(item[1], int):
+            return self._data[item[0]][item[1]]
+        else:
+            raise IndexError('Index must be an int or a tuple of 2 ints!')
+
+    def __setitem__(self, key, value):
+        if not isinstance(key, (list, tuple)):
+            raise KeyError('Key must be a list or tuple!')
+        if len(key) != 2:
+            raise KeyError('Key must have length 2!')
+        if key[0] < 0 or key[0] >= self.dim[0] or key[1] < 0 or key[1] >= self.dim[1]:
+            raise IndexError
+        if not isinstance(value, Number):
+            raise ArithmeticError('Value must be a number!')
+        self._data[key[0]][key[1]] = value
+
+    def __len__(self):
+        """
+        Returns the number of rows.
+        """
+        return self.dim[0]
+
+    def __iter__(self):
+        self.n = 0
+        return self
+
+    def __next__(self):
+        if self.n < self.dim[0]:
+            result = self[self.n]
+            self.n += 1
+            return result
+        else:
+            raise StopIteration
+
+    def __setattr__(self, key, value):
+        if 'dim' in self.__dict__ and key is 'dim':
+            raise KeyError('Cannot modify a matrix\'s dimensions!')
+        super().__setattr__(key, value)

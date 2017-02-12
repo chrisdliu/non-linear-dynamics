@@ -15,15 +15,10 @@ class GuiObj:
     :var z: z level
     :var w: width
     :var h: height
-    :var w: width
-    :var h: height
     :var visible: if the gui object is drawn
     """
 
-    #: label group (z level 6)
-    label_group = _graphics.OrderedGroup(6)
-
-    def __init__(self, x, y, w, h, batch, z=0, visible=True):
+    def __init__(self, x, y, width, height, batch, z=0, visible=True):
         """
         Gui object constructor.
 
@@ -31,10 +26,10 @@ class GuiObj:
         :param x: x coord
         :type y: float
         :param y: y coord
-        :type w: float
-        :param w: width
-        :type h: float
-        :param h: height
+        :type width: float
+        :param width: width
+        :type height: float
+        :param height: height
         :type batch: pyglet.graphics.Batch
         :param batch: the window's batch
         :type z: int
@@ -45,8 +40,8 @@ class GuiObj:
         self.x = x
         self.y = y
         self.z = z
-        self.w = w
-        self.h = h
+        self.w = width
+        self.h = height
         self._batch = batch
         self._vertex_lists = []
         self.group = _graphics.OrderedGroup(z)
@@ -92,9 +87,6 @@ class GuiObj:
         else:
             self._clear()
 
-    def _add_vlist(self, vlist):
-        self._vertex_lists.append(vlist)
-
     def render(self):
         """
         Renders the gui object.
@@ -107,6 +99,9 @@ class GuiObj:
         for vlist in self._vertex_lists:
             vlist.delete()
         self._vertex_lists.clear()
+
+    def _add_vlist(self, vlist):
+        self._vertex_lists.append(vlist)
 
 
 class Label(GuiObj):
@@ -138,10 +133,15 @@ class Label(GuiObj):
         :type color: list(int * 3)
         :param color: color
         """
-        super().__init__(x, y, 0, 0, batch)
+        super().__init__(x, y, 0, 0, batch, 6)
         self.text = text
         self._pyglet_label = _text.Label(text, font_name='Menlo', font_size=8, x=x, y=y, batch=batch,
-                                         group=self.label_group, color=(*color, 255))
+                                         group=self.group, color=(*color, 255))
+
+    def set_pos(self, x, y):
+        super().set_pos(x, y)
+        self._pyglet_label.x = x
+        self._pyglet_label.y = y
 
     def set_visible(self, visible):
         if visible:
@@ -159,11 +159,6 @@ class Label(GuiObj):
         """
         self._pyglet_label.text = text
 
-    def set_pos(self, x, y):
-        super().set_pos(x, y)
-        self._pyglet_label.x = x
-        self._pyglet_label.y = y
-
 
 class Box(GuiObj):
     """
@@ -178,18 +173,18 @@ class Box(GuiObj):
     :var visible: if the box is drawn
     """
 
-    def __init__(self, x, y, w, h, batch, z=0, color=(255, 255, 255)):
+    def __init__(self, x, y, width, height, batch, z=0, color=(255, 255, 255)):
         """
         Box constructor.
 
-        :type x: int
+        :type x: float
         :param x: x coord
-        :type y: int
+        :type y: float
         :param y: y coord
-        :type w: int
-        :param w: width
-        :type h: int
-        :param h: height
+        :type width: float
+        :param width: width
+        :type height: float
+        :param height: height
         :type batch: pyglet.graphics.Batch
         :param batch: the window's batch
         :type z: int
@@ -197,7 +192,7 @@ class Box(GuiObj):
         :type color: list(int * 3)
         :param color: color
         """
-        super().__init__(x, y, w, h, batch, z=z)
+        super().__init__(x, y, width, height, batch, z=z)
         self.color = color
 
     def set_color(self, r, g, b):
@@ -227,16 +222,14 @@ class GuiComp:
 
     :var x: x coord
     :var y: y coord
-    :var z: z level
-    :var w: width
-    :var h: height
     :var w: width
     :var h: height
     :var focusable: if the component can be in focus
     :var visible: if the component is drawn
+    :var guiobjs: dictionary of gui objects
     """
 
-    def __init__(self, x, y, w, h, batch, focusable=False, visible=True):
+    def __init__(self, x, y, width, height, batch, focusable=False, visible=True):
         """
         Gui component constructor.
 
@@ -244,12 +237,12 @@ class GuiComp:
         :param x: x coord
         :type y: int
         :param y: y coord
-        :type w: int
-        :param w: width
-        :type h: int
-        :param h: height
+        :type width: int
+        :param width: width
+        :type height: int
+        :param height: height
         :type batch: pyglet.graphics.Batch
-        :param batch: the batch to add its vertex lists to
+        :param batch: the window's batch
         :type focusable: bool
         :param focusable: if the gui component can be in focus
         :type visible: bool
@@ -257,8 +250,8 @@ class GuiComp:
         """
         self.x = x
         self.y = y
-        self.w = w
-        self.h = h
+        self.w = width
+        self.h = height
         self._batch = batch
         self.focusable = focusable
         self.visible = visible
@@ -278,17 +271,32 @@ class GuiComp:
         self.x = x
         self.y = y
 
-    def set_size(self, w, h):
+    def set_size(self, width, height):
         """
         Sets the size of the gui component.
 
-        :type w: int
-        :param w: width
-        :type h: int
-        :param h: height
+        :type width: int
+        :param width: width
+        :type height: int
+        :param height: height
         """
-        self.w = w
-        self.h = h
+        self.w = width
+        self.h = height
+
+    def set_visible(self, visible):
+        """
+        Sets the visible field.
+        If visible is True, it is rendered.
+        If visible is False, it is unrendered.
+
+        :type visible: bool
+        :param visible: visible
+        """
+        self.visible = visible
+        for guiobj in self.guiobjs.values():
+            guiobj.set_visible(visible)
+        if visible:
+            self.render()
 
     def on(self):
         """
@@ -302,24 +310,9 @@ class GuiComp:
         """
         self.set_visible(False)
 
-    def set_visible(self, visible):
-        """
-        Sets the guiobj's visible field.
-        If visible is True, it is rendered.
-        If visible is False, it is unrendered.
-
-        :type visible: bool
-        :param visible: visible
-        """
-        self.visible = visible
-        for guiobj in self.guiobjs.values():
-            guiobj.set_visible(visible)
-        if visible:
-            self.render()
-
     def focus_on(self):
         """
-        Called when the focus is the gui component.
+        Called when the focus enters the gui component.
         """
         if self.focusable:
             self.is_focus = True
@@ -373,6 +366,8 @@ class GuiComp:
         :type color: list(int * 3)
         :param color: color
         """
+        if name in self.guiobjs:
+            raise KeyError('GuiObj with name already exists!')
         self.guiobjs[name] = Label(x, y, text, self._batch, color)
 
     def add_box(self, name, x, y, w, h, z=0, color=(255, 255, 255)):
@@ -386,7 +381,7 @@ class GuiComp:
         :type y: float
         :param y: y coord
         :type w: float
-        :param w: widht
+        :param w: width
         :type h: float
         :param h: height
         :type z: int
@@ -396,18 +391,21 @@ class GuiComp:
         :type color: list(int * 3)
         :param color: color
         """
+        if name in self.guiobjs:
+            raise KeyError('GuiObj with name already exists!')
         self.guiobjs[name] = Box(x, y, w, h, self._batch, z, color)
 
     def render(self):
         """
         Sets parameters for the gui objects.
+        self.flush() must be called at the end.
         Should be overridden.
         """
         pass
 
     def flush(self):
         """
-        Renders all the gui objects
+        Renders all the gui objects in its dictionary.
         """
         for guiobj in self.guiobjs.values():
             guiobj.render()
@@ -434,16 +432,16 @@ class Button(GuiComp):
 
     :var x: x coord
     :var y: y coord
-    :var z: z level
     :var w: width
     :var h: height
     :var text: text
     :var action: function called when pressed
     :var focusable: if the component can be in focus
     :var visible: if the component is drawn
+    :var guiobjs: dictionary of gui objects
     """
 
-    def __init__(self, x, y, w, h, text, batch, action=None):
+    def __init__(self, x, y, width, height, text, batch, action=None):
         """
         Button constructor.
 
@@ -451,37 +449,37 @@ class Button(GuiComp):
         :param x: x coord
         :type y: int
         :param y: y coord
-        :type w: int
-        :param w: width
-        :type h: int
-        :param h: height
+        :type width: int
+        :param width: width
+        :type height: int
+        :param height: height
         :type text: str
         :param text: text
         :type batch: pyglet.graphics.Batch
-        :param batch: the batch to add its vertex lists to
+        :param batch: the window's batch
         :type action: function
         :param action: the function called when pressed
         """
-        super().__init__(x, y, w, h, batch, True)
+        super().__init__(x, y, width, height, batch, True)
         self.action = action
         self.add_label('label', x, y, text)
-        self.add_box('box', x, y, w, h, color=(90, 90, 90))
+        self.add_box('box', x, y, width, height, color=(90, 90, 90))
 
     def set_pos(self, x, y):
         super().set_pos(x, y)
         self.guiobjs['label'].set_pos(x, y)
         self.guiobjs['box'].set_pos(x, y)
 
-    def mouse_up(self, *args, **kwargs):
+    def mouse_up(self, x, y, buttons, modifiers):
         if self.action:
-            self.action(*args, **kwargs)
+            self.action()
 
     def set_text(self, text):
         """
         Sets the button's text.
 
         :type text: str
-        :param text: text
+        :param text: button text
         """
         self.guiobjs['label'].set_text(text)
 
@@ -505,12 +503,12 @@ class ToggleButton(Button):
     :var w: width
     :var h: height
     :var text: text
-    :var action: function called when pressed
     :var focusable: if the component can be in focus
     :var visible: if the component is drawn
+    :var guiobjs: dictionary of gui objects
     """
 
-    def __init__(self, x, y, w, h, text, boolval, batch):
+    def __init__(self, x, y, width, height, text, boolval, batch):
         """
         Toggle button constructor.
 
@@ -518,10 +516,10 @@ class ToggleButton(Button):
         :param x: x coord
         :type y: int
         :param y: y coord
-        :type w: int
-        :param w: width
-        :type h: int
-        :param h: height
+        :type width: int
+        :param width: width
+        :type height: int
+        :param height: height
         :type text: str
         :param text: text
         :type boolval: BoolValue
@@ -530,7 +528,7 @@ class ToggleButton(Button):
         :param batch: the batch to add its vertex lists to
         """
         self.boolval = boolval
-        super().__init__(x, y, w, h, text, batch, action=self.toggle)
+        super().__init__(x, y, width, height, text, batch, action=self.toggle)
 
     def toggle(self):
         """

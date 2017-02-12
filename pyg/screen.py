@@ -80,6 +80,7 @@ class Screen:
         self.visible = visible
         if visible:
             self.render()
+            self.set_bg(self.bg)
         else:
             for vtype in self._vertex_lists.keys():
                 if self._vertex_lists[vtype]:
@@ -162,7 +163,7 @@ class Screen:
         """
         Sets the vertex and color arrays for lines.
         Vertexes and colors must be the same length.
-        Length of vertexes must be divisible by 2.
+        Number of vertexes must be divisible by 2.
 
         :type vertexes: list(float)
         :param vertexes: flattened list of 3d vectors
@@ -180,7 +181,7 @@ class Screen:
         """
         Sets the vertex and color arrays for triangles.
         Vertexes and colors must be the same length.
-        Length of vertexes must be divisible by 3.
+        Number of vertexes must be divisible by 3.
 
         :type vertexes: list(float)
         :param vertexes: flattened list of 3d vectors
@@ -194,7 +195,7 @@ class Screen:
         """
         Sets the vertex and color arrays for quads.
         Vertexes and colors must be the same length.
-        Length of vertexes must be divisible by 4.
+        Number of vertexes must be divisible by 4.
 
         :type vertexes: list(float)
         :param vertexes: flattened list of 3d vectors
@@ -225,11 +226,28 @@ class Screen:
         raise NotImplementedError
     # endregion
 
+    def draw(self):
+        """
+        Draws the batch.
+        """
+        self._batch.draw()
+
+    # region to be overridden functions
+    def render(self):
+        """
+        Renders the screen.
+        All calls to add points, lines, etc. should be here.
+        self.flush() must be called at the end.
+        Should be overridden.
+        """
+        pass
+
     def flush(self):
         """
         If the screen is visible, adds the vertexes in the buffer to the batch.
-        Then deletes the current vertex lists.
+        Then deletes the current vertex lists and clears the vertex and color arrays.
         Should not be overridden.
+        Must be called at the end of self.render()
         """
         for vtype in self._vertex_types:
             if self._vertex_lists[vtype]:
@@ -266,23 +284,6 @@ class Screen:
         for vtype in self._vertex_types:
             self._vertexes[vtype] = []
             self._colors[vtype] = []
-
-    def draw(self):
-        """
-        Draws the batch.
-        Should not be overridden.
-        """
-        self._batch.draw()
-
-    # region to be overridden functions
-    def render(self):
-        """
-        Renders the screen.
-        All calls to add points, lines, etc. should be here.
-        self.flush() must be called at the end.
-        Should be overridden.
-        """
-        pass
 
     def mouse_move(self, x, y, dx, dy):
         """
@@ -447,6 +448,7 @@ class Screen2D(Screen):
                                 ('v3f', (0, 0, -1000, self.w, 0, -1000,
                                          self.w, self.h, -1000, 0, self.h, -1000)),
                                 ('c3B', color * 4))
+        self.bg = color
         self._vertex_lists['bg'] = vlist
 
     def add_point(self, x, y, z=0, color=(0, 0, 0)):
@@ -503,8 +505,8 @@ class Screen2D(Screen):
     def add_triangle(self, x1, y1, x2, y2, x3, y3, z=0, color=(0, 0, 0), uniform=True, colors=([0] * 9)):
         """
         Adds a triangle to be drawn.
-        If uniform, draws using color argument.
-        If non-uniform, draws using colors argument.
+        If uniform, draws using color parameter.
+        If non-uniform, draws using colors parameter.
 
         :type x1: float
         :param x1: x1
@@ -536,8 +538,8 @@ class Screen2D(Screen):
     def add_quad(self, x1, y1, x2, y2, x3, y3, x4, y4, z=0, color=(0, 0, 0), uniform=True, colors=([0] * 12)):
         """
         Adds a quadrilateral to be drawn.
-        If uniform, draws using color argument.
-        If non-uniform, draws using colors argument.
+        If uniform, draws using color parameter.
+        If non-uniform, draws using colors parameter.
 
         :type x1: float
         :param x1: x1
@@ -654,7 +656,6 @@ class GraphScreen(Screen2D):
     def reset_graph(self):
         """
         Only resets the graph to its original view. Does not render the screen.
-        :return:
         """
         self.gx = self._ogx
         self.gy = self._ogy
@@ -735,9 +736,9 @@ class GraphScreen(Screen2D):
         Refits the screen and graph to a given dimension.
 
         :type width: int
-        :param width: new screen width
+        :param width: screen width
         :type height: int
-        :param height: new screen height
+        :param height: screen height
         """
         old_gw = self.gw
         old_gh = self.gh
@@ -751,7 +752,7 @@ class GraphScreen(Screen2D):
     # region graph move functions
     def up(self):
         """
-        Moves the graph center up
+        Moves the graph center up.
         """
         self.gy += self.gh / 5
         self._set_graph_minmax()
@@ -759,7 +760,7 @@ class GraphScreen(Screen2D):
 
     def down(self):
         """
-        Moves the graph center down
+        Moves the graph center down.
         """
         self.gy -= self.gh / 5
         self._set_graph_minmax()
@@ -767,7 +768,7 @@ class GraphScreen(Screen2D):
 
     def left(self):
         """
-        Moves the graph center left
+        Moves the graph center left.
         """
         self.gx -= self.gw / 5
         self._set_graph_minmax()
@@ -775,7 +776,7 @@ class GraphScreen(Screen2D):
 
     def right(self):
         """
-        Moves the graph center right
+        Moves the graph center right.
         """
         self.gx += self.gw / 5
         self._set_graph_minmax()
@@ -866,7 +867,19 @@ class Screen3D(Screen):
         super().__init__(x, y, width, height, valset, bg, visible, active)
 
     def set_bg(self, color):
-        pass
+        if self._vertex_lists['bg']:
+            self._vertex_lists['bg'].delete()
+        points = []
+        points.extend((-900, -900, -900, 900, -900, -900, 900, 900, -900, -900, 900, -900))
+        points.extend((-900, -900, -900, 900, -900, -900, 900, -900, 900, -900, -900, 900))
+        points.extend((900, -900, -900, 900, 900, -900, 900, 900, 900, 900, -900, 900))
+        points.extend((900, 900, -900, -900, 900, -900, -900, 900, 900, 900, 900, 900))
+        points.extend((-900, 900, -900, -900, -900, -900, -900, -900, 900, -900, 900, 900))
+        points.extend((-900, -900, 900, 900, -900, 900, 900, 900, 900, -900, 900, 900))
+        colors = [*color] * 24
+        vlist = self._batch.add(24, GL_QUADS, None, ('v3f', points), ('c3B', colors))
+        self.bg = color
+        self._vertex_lists['bg'] = vlist
 
     def draw(self):
         glMatrixMode(GL_PROJECTION)
@@ -950,5 +963,17 @@ class Screen3D(Screen):
             self.rotation[2] += 5
         elif symbol == _win.key.S:
             self.offset[2] += 10
+            if self.offset[2] > 400:
+                self.offset[2] = 400
         elif symbol == _win.key.A:
             self.offset[2] -= 10
+            if self.offset[2] < -400:
+                self.offset[2] = -400
+        elif symbol == _win.key.J:
+            self.offset[0] += 10
+        elif symbol == _win.key.L:
+            self.offset[0] -= 10
+        elif symbol == _win.key.I:
+            self.offset[1] -= 10
+        elif symbol == _win.key.K:
+            self.offset[1] += 10
