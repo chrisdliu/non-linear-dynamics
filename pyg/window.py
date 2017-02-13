@@ -1,3 +1,7 @@
+"""
+Defines the base window.
+"""
+
 import pyglet.clock as _clock
 import pyglet.graphics as _graphics
 import pyglet.window as _win
@@ -102,31 +106,69 @@ class Window(_win.Window):
         Adds a screen.
 
         :type name: str
-        :param name: name
+        :param name: the screen's name
         :type screen: Screen(subclass)
         :param screen: a screen
         """
         self.screens[name] = screen
 
-    def add_button(self, name, x, y, w, h, text, action=None):
+    def add_button(self, name, x, y, width, height, text, action=None):
         """
         Adds a button.
 
-        :param name:
-        :param x:
-        :param y:
-        :param w:
-        :param h:
-        :param text:
-        :param action:
-        :return:
+        :type name: str
+        :param name: the button's name
+        :type x: int
+        :param x: x coord
+        :type y: int
+        :param y: y coord
+        :type width: int
+        :param width: width
+        :type height: int
+        :param height: height
+        :type text: str
+        :param text: button text
+        :type action: function
+        :param action: function called when pressed
         """
-        self.buttons[name] = Button(x, y, w, h, text, self._batch, action=action)
+        self.buttons[name] = Button(x, y, width, height, text, self._batch, action=action)
 
-    def add_toggle_button(self, name, x, y, w, h, text, boolval):
-        self.buttons[name] = ToggleButton(x, y, w, h, text, boolval, self._batch)
+    def add_toggle_button(self, name, x, y, width, height, text, boolval):
+        """
+        Adds a toggle button.
+
+        :type name: str
+        :param name: the toggle button's name
+        :type x: int
+        :param x: x coord
+        :type y: int
+        :param y: y coord
+        :type width: int
+        :param width: width
+        :type height: int
+        :param height: height
+        :type text: str
+        :param text: button text
+        :type boolval: BoolValue
+        :param boolval: the bool value linked with the button
+        """
+        self.buttons[name] = ToggleButton(x, y, width, height, text, boolval, self._batch)
 
     def add_label(self, name, x, y, text='', color=(255, 255, 255)):
+        """
+        Adds a label.
+
+        :type name: str
+        :param name: the label's name
+        :type x: float
+        :param x: x coord
+        :type y: float
+        :param y: y coord
+        :type text: str
+        :param text: label text
+        :type color: list(int * 3)
+        :param color: color
+        """
         self.labels[name] = Label(x, y, text, self._batch, color=color)
 
     def add_int_field(self, name, x, y, w, h, field_name, valobj):
@@ -161,15 +203,75 @@ class Window(_win.Window):
 
     # region valset functions
     def add_int_value(self, name, value, limit='', inclusive='ul', low=0, high=1):
+        """
+        Adds an int value to the window's value set.
+        Limit and inclusive should contain a 'u' for upper and 'l' for lower limit/inclusive comparison.
+
+        :type name: str
+        :param name: the value's name
+        :type value: int
+        :param value: the initial value
+        :type limit: str
+        :param limit: upper and lower limits
+        :type inclusive: str
+        :param inclusive: inclusive/non-inclusive comparison
+        :type low: float
+        :param low: lower limit
+        :type low: float
+        :param high: upper limit
+        """
         self.valset.add_int_value(name, value, limit, inclusive, low, high)
 
     def add_float_value(self, name, value, limit='', inclusive='ul', low=0, high=1):
+        """
+        Adds a float value to the window's value set.
+        Limit and inclusive should contain a 'u' for upper and 'l' for lower limit/inclusive comparison.
+
+        :type name: str
+        :param name: the value's name
+        :type value: float
+        :param value: the initial value
+        :type limit: str
+        :param limit: upper and lower limits
+        :type inclusive: str
+        :param inclusive: inclusive/non-inclusive comparison
+        :type low: float
+        :param low: lower limit
+        :type low: float
+        :param high: upper limit
+        """
         self.valset.add_float_value(name, value, limit, inclusive, low, high)
 
     def add_complex_value(self, name, value, limit='', inclusive='ul', low=0, high=1):
+        """
+        Adds a complex value to the window's value set.
+        Limit and inclusive should contain a 'u' for upper and 'l' for lower limit/inclusive comparison.
+        Uses magnitude for comparisons.
+
+        :type name: str
+        :param name: the value's name
+        :type value: complex
+        :param value: the initial value
+        :type limit: str
+        :param limit: upper and lower limits
+        :type inclusive: str
+        :param inclusive: inclusive/non-inclusive comparison
+        :type low: float
+        :param low: lower limit
+        :type low: float
+        :param high: upper limit
+        """
         self.valset.add_complex_value(name, value, limit, inclusive, low, high)
 
     def add_bool_value(self, name, value):
+        """
+        Adds a bool value to the window's value set.
+
+        :type name: str
+        :param name: the value's name
+        :type value: bool
+        :param value: the initial value
+        """
         self.valset.add_bool_value(name, value)
 
     def get_val(self, name):

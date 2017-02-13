@@ -173,6 +173,8 @@ class FloatValue(NumberValue):
 class ComplexValue(NumberValue):
     """
     A complex value object. Uses magnitude for comparisons.
+
+    :var value: the value it holds
     """
 
     def __str__(self):
@@ -206,7 +208,7 @@ class ComplexValue(NumberValue):
 
 class BoolValue(Value):
     """
-    A bool value object. Always valid.
+    A bool value object.
 
     :var value: the value it holds
     """
@@ -235,9 +237,6 @@ class ValSet:
     """
 
     def __init__(self):
-        """
-        Value Set constructor.
-        """
         self.vals = {}
 
     def add_int_value(self, name, value, limit='', inclusive='ul', low=0, high=1):

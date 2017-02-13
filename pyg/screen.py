@@ -1,3 +1,7 @@
+"""
+Defines screens for drawing objects.
+"""
+
 import pyglet.graphics as _graphics
 import pyglet.window as _win
 
@@ -207,7 +211,7 @@ class Screen:
     # endregion
 
     # region to be implemented functions
-    def set_bg(self, color):
+    def set_bg(self, bg):
         raise NotImplementedError
 
     def add_point(self, *args, **kwargs):
@@ -232,7 +236,6 @@ class Screen:
         """
         self._batch.draw()
 
-    # region to be overridden functions
     def render(self):
         """
         Renders the screen.
@@ -246,8 +249,8 @@ class Screen:
         """
         If the screen is visible, adds the vertexes in the buffer to the batch.
         Then deletes the current vertex lists and clears the vertex and color arrays.
+        Should be called at the end of self.render()
         Should not be overridden.
-        Must be called at the end of self.render()
         """
         for vtype in self._vertex_types:
             if self._vertex_lists[vtype]:
@@ -351,7 +354,6 @@ class Screen:
         :param height: window height
         """
         pass
-    # endregion
 
     def is_inside(self, x, y):
         """
@@ -414,7 +416,6 @@ class Screen2D(Screen):
     def draw(self):
         """
         Draws the batch in glOrtho perspective.
-        Should not be overridden.
         """
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
@@ -435,7 +436,7 @@ class Screen2D(Screen):
         glDisable(GL_SCISSOR_TEST)
         glDisable(GL_DEPTH_TEST)
 
-    def set_bg(self, color):
+    def set_bg(self, bg):
         """
         Sets the background color.
 
@@ -447,8 +448,8 @@ class Screen2D(Screen):
         vlist = self._batch.add(4, GL_QUADS, None,
                                 ('v3f', (0, 0, -1000, self.w, 0, -1000,
                                          self.w, self.h, -1000, 0, self.h, -1000)),
-                                ('c3B', color * 4))
-        self.bg = color
+                                ('c3B', bg * 4))
+        self.bg = bg
         self._vertex_lists['bg'] = vlist
 
     def add_point(self, x, y, z=0, color=(0, 0, 0)):
@@ -502,7 +503,7 @@ class Screen2D(Screen):
         self._vertexes['lines'].extend((x1, y1, z, x2, y2, z))
         self._colors['lines'].extend(color * 2)
 
-    def add_triangle(self, x1, y1, x2, y2, x3, y3, z=0, color=(0, 0, 0), uniform=True, colors=([0] * 9)):
+    def add_triangle(self, x1, y1, x2, y2, x3, y3, z=0, color=(0, 0, 0), uniform=True, colors=None):
         """
         Adds a triangle to be drawn.
         If uniform, draws using color parameter.
@@ -527,7 +528,7 @@ class Screen2D(Screen):
         :type uniform: bool
         :param uniform: uniform coloring
         :type colors: list(int * 9)
-        :param colors: non-uniform colors
+        :param colors: non-uniform coloring
         """
         self._vertexes['triangles'].extend((x1, y1, z, x2, y2, z, x3, y3, z))
         if uniform:
@@ -535,7 +536,7 @@ class Screen2D(Screen):
         else:
             self._colors['triangles'].extend(colors)
 
-    def add_quad(self, x1, y1, x2, y2, x3, y3, x4, y4, z=0, color=(0, 0, 0), uniform=True, colors=([0] * 12)):
+    def add_quad(self, x1, y1, x2, y2, x3, y3, x4, y4, z=0, color=(0, 0, 0), uniform=True, colors=None):
         """
         Adds a quadrilateral to be drawn.
         If uniform, draws using color parameter.
@@ -564,7 +565,7 @@ class Screen2D(Screen):
         :type uniform: bool
         :param uniform: uniform coloring
         :type colors: list(int * 12)
-        :param colors: non-uniform colors
+        :param colors: non-uniform coloring
         """
         self._vertexes['quads'].extend((x1, y1, z, x2, y2, z, x3, y3, z, x4, y4, z))
         if uniform:
@@ -860,13 +861,60 @@ class GraphScreen(Screen2D):
 
 
 class Screen3D(Screen):
+    """
+    A 3D implementation of Screen.
+
+    :var x: screen's x coord
+    :var y: screen's y coord
+    :var w: screen's width
+    :var h: screen's height
+    :var valset: parent window's value set
+    :var bg: screen's background color
+    :var visible: if the screen is drawn
+    :var active: if the screen is updated
+    """
+
     def __init__(self, x, y, width, height, camera, rotation, offset, valset, bg=(0, 0, 0), visible=True, active=True):
+        """
+        Screen3D constructor.
+
+        :type x: int
+        :param x: x coord
+        :type y: int
+        :param y: y coord
+        :type width: int
+        :param width: width
+        :type height: int
+        :param height: height
+        :type camera: Vector(3d)
+        :param camera: camera vector
+        :type rotation: Vector(3d)
+        :param rotation: rotation vector
+        :type offset: Vector(3d)
+        :param offset: offset vector
+        :type valset: ValSet
+        :param valset: the window's value set
+        :type bg: list(int * 3)
+        :param bg: background color
+        :type visible: bool
+        :param visible: determines if the screen is drawn
+        :type active: bool
+        :param active: determines if the screen is updated
+        """
+
         self.camera = camera
         self.rotation = rotation
         self.offset = offset
         super().__init__(x, y, width, height, valset, bg, visible, active)
 
-    def set_bg(self, color):
+    def set_bg(self, bg):
+        """
+        Sets the background color.
+
+        :type bg: list(int * 3)
+        :param bg: background color
+        """
+
         if self._vertex_lists['bg']:
             self._vertex_lists['bg'].delete()
         points = []
@@ -876,12 +924,16 @@ class Screen3D(Screen):
         points.extend((900, 900, -900, -900, 900, -900, -900, 900, 900, 900, 900, 900))
         points.extend((-900, 900, -900, -900, -900, -900, -900, -900, 900, -900, 900, 900))
         points.extend((-900, -900, 900, 900, -900, 900, 900, 900, 900, -900, 900, 900))
-        colors = [*color] * 24
+        colors = [*bg] * 24
         vlist = self._batch.add(24, GL_QUADS, None, ('v3f', points), ('c3B', colors))
-        self.bg = color
+        self.bg = bg
         self._vertex_lists['bg'] = vlist
 
     def draw(self):
+        """
+        Draws the batch in gluPerspective mode.
+        """
+
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         ar = self.w / self.h
@@ -919,14 +971,53 @@ class Screen3D(Screen):
         glDisable(GL_DEPTH_TEST)
 
     def add_point(self, x, y, z, color=(255, 255, 255)):
+        """
+        Adds a point to be drawn.
+
+        :type x: float
+        :param x: x
+        :type y: float
+        :param y: y
+        :type z: float
+        :param z: z
+        :type color: list(int * 3)
+        :param color: color
+        """
         self._vertexes['points'].extend((x, y, z))
         self._colors['points'].extend(color)
 
     def add_points(self, points, colors):
+        """
+        Adds a list of points to be drawn.
+        Points and colors must be the same length.
+
+        :type points: list(float)
+        :param points: flattened list of 3d vectors
+        :type colors: list(int)
+        :param colors: flattened list of rgb colors
+        """
         self._vertexes['points'].extend(points)
         self._colors['points'].extend(colors)
 
     def add_line(self, x1, y1, z1, x2, y2, z2, color=(255, 255, 255)):
+        """
+        Adds a line to be drawn.
+
+        :type x1: float
+        :param x1: x1
+        :type y1: float
+        :param y1: y1
+        :type z1: float
+        :param z1: z1
+        :type x2: float
+        :param x2: x2
+        :type y2: float
+        :param y2: y2
+        :type z2: float
+        :param z2: z2
+        :type color: list(int * 3)
+        :param color: color
+        """
         self._vertexes['lines'].extend((x1, y1, z1, x2, y2, z2))
         self._colors['lines'].extend(color * 2)
 
@@ -934,14 +1025,80 @@ class Screen3D(Screen):
         self._vertexes['line_strip'] = lines
         self._colors['line_strip'] = colors
 
-    def add_triangle(self, x1, y1, z1, x2, y2, z2, x3, y3, z3, color=(255, 255, 255), uniform=True, colors=([255] * 9)):
+    def add_triangle(self, x1, y1, z1, x2, y2, z2, x3, y3, z3, color=(255, 255, 255), uniform=True, colors=None):
+        """
+        Adds a triangle to be drawn.
+        If uniform, draws using color parameter.
+        If non-uniform, draws using colors parameter.
+
+        :type x1: float
+        :param x1: x1
+        :type y1: float
+        :param y1: y1
+        :type z1: float
+        :param z1: z1
+        :type x2: float
+        :param x2: x2
+        :type y2: float
+        :param y2: y2
+        :type z2: float
+        :param z2: z2
+        :type x3: float
+        :param x3: x3
+        :type y3: float
+        :param y3: y3
+        :type z3: float
+        :param z3: z3
+        :type color: list(int * 3)
+        :param color: color
+        :type uniform: bool
+        :param uniform: uniform coloring
+        :type colors: list(int * 9)
+        :param colors: non-uniform coloring
+        """
         self._vertexes['triangles'].extend((x1, y1, z1, x2, y2, z2, x3, y3, z3))
         if uniform:
             self._colors['triangles'].extend(color * 3)
         else:
             self._colors['triangles'].extend(colors)
 
-    def add_quad(self, x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, color=(255, 255, 255), uniform=True, colors=([255] * 12)):
+    def add_quad(self, x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, color=(255, 255, 255), uniform=True, colors=None):
+        """
+        Adds a quadrilateral to be drawn.
+        If uniform, draws using color parameter.
+        If non-uniform, draws using colors parameter.
+
+        :type x1: float
+        :param x1: x1
+        :type y1: float
+        :param y1: y1
+        :type z1: float
+        :param z1: z1
+        :type x2: float
+        :param x2: x2
+        :type y2: float
+        :param y2: y2
+        :type z2: float
+        :param z2: z2
+        :type x3: float
+        :param x3: x3
+        :type y3: float
+        :param y3: y3
+        :type z3: float
+        :param z3: z3
+        :type x4: float
+        :param x4: x4
+        :type y4: float
+        :param y4: y4
+        :type z4: float
+        :param z4: z4
+        :type color: list(int * 3)
+        :param color: color
+        :type uniform: bool
+        :param uniform: uniform coloring
+        :type colors: list(int * 12)
+        :param colors: non-uniform coloring
+        """
         self._vertexes['quads'].extend((x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4))
         if uniform:
             self._colors['quads'].extend(color * 4)

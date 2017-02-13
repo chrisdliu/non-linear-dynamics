@@ -1,3 +1,7 @@
+"""
+Defines gui objects (GuiObj) and gui components (GuiComp).
+"""
+
 import pyglet.gl as _gl
 import pyglet.graphics as _graphics
 import pyglet.text as _text
@@ -225,6 +229,8 @@ class GuiComp:
     :var w: width
     :var h: height
     :var focusable: if the component can be in focus
+    :var is_focus: if the component is in focus
+    :var is_hover: if the mouse is hovering over the component
     :var visible: if the component is drawn
     :var guiobjs: dictionary of gui objects
     """
@@ -254,9 +260,9 @@ class GuiComp:
         self.h = height
         self._batch = batch
         self.focusable = focusable
-        self.visible = visible
         self.is_focus = False
         self.is_hover = False
+        self.visible = visible
         self.guiobjs = {}
 
     def set_pos(self, x, y):
@@ -437,6 +443,8 @@ class Button(GuiComp):
     :var text: text
     :var action: function called when pressed
     :var focusable: if the component can be in focus
+    :var is_focus: if the component is in focus
+    :var is_hover: if the mouse is hovering over the component
     :var visible: if the component is drawn
     :var guiobjs: dictionary of gui objects
     """
@@ -504,6 +512,8 @@ class ToggleButton(Button):
     :var h: height
     :var text: text
     :var focusable: if the component can be in focus
+    :var is_focus: if the component is in focus
+    :var is_hover: if the mouse is hovering over the component
     :var visible: if the component is drawn
     :var guiobjs: dictionary of gui objects
     """
@@ -525,7 +535,7 @@ class ToggleButton(Button):
         :type boolval: BoolValue
         :param boolval: the bool value linked with the button
         :type batch: pyglet.graphics.Batch
-        :param batch: the batch to add its vertex lists to
+        :param batch: the window's batch
         """
         self.boolval = boolval
         super().__init__(x, y, width, height, text, batch, action=self.toggle)
@@ -650,17 +660,17 @@ class NumberField(Field):
     )
 
 
-class FloatField(NumberField):
-    def __init__(self, x, y, w, h, name, valobj, batch):
-        if type(valobj) is not FloatValue:
-            raise TypeError('Value object is not a FloatValue!')
-        super().__init__(x, y, w, h, name, valobj, batch)
-
-
 class IntField(NumberField):
     def __init__(self, x, y, w, h, name, valobj, batch):
         if type(valobj) is not IntValue:
             raise TypeError('Value object is not a IntValue!')
+        super().__init__(x, y, w, h, name, valobj, batch)
+
+
+class FloatField(NumberField):
+    def __init__(self, x, y, w, h, name, valobj, batch):
+        if type(valobj) is not FloatValue:
+            raise TypeError('Value object is not a FloatValue!')
         super().__init__(x, y, w, h, name, valobj, batch)
 
 
