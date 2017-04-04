@@ -247,5 +247,4 @@ class JuliaWindow(pyg.window.Window):
         super().on_resize(width, height)
 
 
-window = JuliaWindow(width=500, height=700, caption='Julia Graph', bg=(0, 0, 0, 1), resizable=True)
-pyglet.app.run()
+pyg.run(JuliaWindow, 500, 700, 'Julia Graph', (0, 0, 0))

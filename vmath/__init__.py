@@ -6,46 +6,39 @@ A package for vector math.
 __author__ = 'Christopher Liu'
 
 
-from .vmath import *
+import numpy as np
+from math import cos, sin, pi
 
 
-def v_zero(dim):
-    """
-    Returns a zero vector of the provided dimension.
-
-    :type dim: int
-    :param dim: dimension
-    :rtype: Vector
-    :return: a zero vector
-    """
-    return Vector(*([0] * dim))
+def v(*x):
+    return np.array(x)
 
 
-def v_i():
-    """
-    Returns a unit vector along the x axis in 3 dimensions.
-
-    :rtype: Vector
-    :return: unit vector i
-    """
-    return Vector(1, 0, 0)
+def i2():
+    return v(1, 0)
 
 
-def v_j():
-    """
-    Returns a unit vector along the y axis in 3 dimensions.
-
-    :rtype: Vector
-    :return: unit vector j
-    """
-    return Vector(0, 1, 0)
+def j2():
+    return v(0, 1)
 
 
-def v_k():
-    """
-    Returns a unit vector along the z axis in 3 dimensions.
+def i3():
+    return v(1, 0, 0)
 
-    :rtype: Vector
-    :return: unit vector k
-    """
-    return Vector(0, 0, 1)
+
+def j3():
+    return v(0, 1, 0)
+
+
+def k3():
+    return v(0, 0, 1)
+
+
+def h(v):
+    return v[:-1]
+
+
+def norm(v, order=2):
+    return np.linalg.norm(v, order)
+
+

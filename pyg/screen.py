@@ -255,7 +255,7 @@ class Screen:
         for vtype in self._vertex_types:
             if self._vertex_lists[vtype]:
                 self._vertex_lists[vtype].delete()
-                self._vertex_lists[vtype] = None
+                del self._vertex_lists[vtype]
             if not self.visible:
                 continue
 
@@ -285,6 +285,8 @@ class Screen:
         Clears the buffer arrays.
         """
         for vtype in self._vertex_types:
+            del self._vertexes[vtype]
+            del self._colors[vtype]
             self._vertexes[vtype] = []
             self._colors[vtype] = []
 
@@ -595,6 +597,7 @@ class GraphScreen(Screen2D):
     :var min_gy: graph's minimum gy drawn
     :var max_gy: graph's maximum gy drawn
     """
+
     def __init__(self, x, y, width, height, gx, gy, gw, gh, valset, zoom_valobj, bg=(255, 255, 255), visible=True, active=True):
         """
         GraphScreen constructor.
@@ -626,13 +629,13 @@ class GraphScreen(Screen2D):
         :type active: bool
         :param active: determines if the screen is updated
         """
+        self.set_graph_coords(gx, gy, gw, gh)
+        self._set_graph_minmax()
+        self.reset_to(gx, gy, gw, gh)
         super().__init__(x, y, width, height, valset, bg, visible, active)
         # original width / height
         self._ow = width
         self._oh = height
-        self.set_graph_coords(gx, gy, gw, gh)
-        self._set_graph_minmax()
-        self.reset_to(gx, gy, gw, gh)
 
         self.zoom_valobj = zoom_valobj
         self.total_zoom = 1
@@ -652,6 +655,7 @@ class GraphScreen(Screen2D):
         Resets the graph to its original view and renders the screen.
         """
         self.reset_graph()
+        self.set_bg(self.bg)
         self.render()
 
     def reset_graph(self):
@@ -750,6 +754,48 @@ class GraphScreen(Screen2D):
         self.w = width
         self.h = height
 
+    def set_bg(self, bg):
+        """
+        Sets the background color.
+
+        :type color: list(int * 3)
+        :param color: background color
+        """
+        if self._vertex_lists['bg']:
+            self._vertex_lists['bg'].delete()
+        vlist = self._batch.add(4, GL_QUADS, None,
+                                ('v3f', (self.min_gx, self.min_gy, -500, self.max_gx, self.min_gy, -500,
+                                         self.max_gx, self.max_gy, -500, self.min_gx, self.max_gy, -500)),
+                                ('c3B', bg * 4))
+        self.bg = bg
+        self._vertex_lists['bg'] = vlist
+
+    def draw(self):
+        """
+        Draws the batch in glOrtho perspective with zoom.
+        """
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        glOrtho(0, self._ww, 0, self._wh, -1001, 1001)
+        glMatrixMode(GL_MODELVIEW)
+
+        glEnable(GL_DEPTH_TEST)
+        glEnable(GL_SCISSOR_TEST)
+        glScissor(self.x, self.y, self.w, self.h)
+
+        glPushMatrix()
+        #glTranslatef(self.x + .1, self.y + .1, 0)
+
+        glTranslatef(self.x + self.w / 2 - self.gx * self.w / self.gw, self.y + self.h / 2 - self.gy * self.h / self.gh, 0)
+        glScalef(self.w / self.gw, self.h / self.gh, 1)
+
+        self._batch.draw()
+
+        glPopMatrix()
+
+        glDisable(GL_SCISSOR_TEST)
+        glDisable(GL_DEPTH_TEST)
+
     # region graph move functions
     def up(self):
         """
@@ -757,6 +803,7 @@ class GraphScreen(Screen2D):
         """
         self.gy += self.gh / 5
         self._set_graph_minmax()
+        self.set_bg(self.bg)
         self.render()
 
     def down(self):
@@ -765,6 +812,7 @@ class GraphScreen(Screen2D):
         """
         self.gy -= self.gh / 5
         self._set_graph_minmax()
+        self.set_bg(self.bg)
         self.render()
 
     def left(self):
@@ -773,6 +821,7 @@ class GraphScreen(Screen2D):
         """
         self.gx -= self.gw / 5
         self._set_graph_minmax()
+        self.set_bg(self.bg)
         self.render()
 
     def right(self):
@@ -781,6 +830,7 @@ class GraphScreen(Screen2D):
         """
         self.gx += self.gw / 5
         self._set_graph_minmax()
+        self.set_bg(self.bg)
         self.render()
     # endregion
 
@@ -847,6 +897,7 @@ class GraphScreen(Screen2D):
             self._set_graph_minmax()
             self.offsx = 0
             self.offsy = 0
+        self.set_bg(self.bg)
         self.render()
 
     def key_down(self, symbol, modifiers):
@@ -932,12 +983,17 @@ class Screen3D(Screen):
     def draw(self):
         """
         Draws the batch in gluPerspective mode.
+
+        Positive z is towards the eye.
+        Rotation rotates about original center.
+        BC push has backwards order?
         """
 
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         ar = self.w / self.h
-        gluPerspective(60, ar, .01, 10000)
+        gluPerspective(60, ar, .01, 5000)
+
         glMatrixMode(GL_MODELVIEW)
 
         glEnable(GL_DEPTH_TEST)
@@ -957,11 +1013,13 @@ class Screen3D(Screen):
 
         # Centered view
         # dist has to be z value ???
+        #glTranslatef(self.x, self.y, 0)
+        glTranslatef(0, 0, 0)
         glTranslatef(*self.camera)
-        glTranslatef(*self.offset)
         glRotatef(self.rotation[0], 1, 0, 0)
         glRotatef(self.rotation[1], 0, 1, 0)
         glRotatef(self.rotation[2], 0, 0, 1)
+        #glTranslatef(*self.offset)
 
         self._batch.draw()
 
@@ -1107,30 +1165,30 @@ class Screen3D(Screen):
 
     def key_down(self, symbol, modifiers):
         if symbol == _win.key.LEFT:
-            self.rotation[1] += 5
+            self.rotation[2] += 5
         elif symbol == _win.key.RIGHT:
-            self.rotation[1] -= 5
+            self.rotation[2] -= 5
         elif symbol == _win.key.UP:
             self.rotation[0] += 5
         elif symbol == _win.key.DOWN:
             self.rotation[0] -= 5
         elif symbol == _win.key.X:
-            self.rotation[2] -= 5
+            self.rotation[1] -= 5
         elif symbol == _win.key.Z:
-            self.rotation[2] += 5
+            self.rotation[1] += 5
         elif symbol == _win.key.S:
-            self.offset[2] += 10
-            if self.offset[2] > 400:
-                self.offset[2] = 400
+            self.camera[2] += 10
+            if self.camera[2] > 400:
+                self.camera[2] = 400
         elif symbol == _win.key.A:
-            self.offset[2] -= 10
-            if self.offset[2] < -400:
-                self.offset[2] = -400
+            self.camera[2] -= 10
+            if self.camera[2] < -400:
+                self.camera[2] = -400
         elif symbol == _win.key.J:
-            self.offset[0] += 10
+            self.camera[0] += 2
         elif symbol == _win.key.L:
-            self.offset[0] -= 10
+            self.camera[0] -= 2
         elif symbol == _win.key.I:
-            self.offset[1] -= 10
+            self.camera[1] -= 2
         elif symbol == _win.key.K:
-            self.offset[1] += 10
+            self.camera[1] += 2

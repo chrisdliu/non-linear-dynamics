@@ -89,6 +89,8 @@ class Tree2D(pyg.screen.GraphScreen):
         super().__init__(*args, **kwargs)
         self.iter = 0
         self.theta = 0
+        self.ratio = 0
+        self.branches = 0
 
     def set_visible(self, visible):
         if not visible:
@@ -103,31 +105,36 @@ class Tree2D(pyg.screen.GraphScreen):
         theta = self.get_val('theta')
         ratio = self.get_val('ratio')
         branches = self.get_val('branches')
-        seeds = []
-        if iter:
-            self.add_line(*self.on_screen(0, 0), *self.on_screen(0, 4), color=palette[0])
-            seeds.append([Vector(0, 4), Vector(0, 4)])
-        for i in range(iter):
-            if i < 5:
-                color = palette[i]
-            else:
-                color = palette[5]
-            new_seeds = []
-            for t, v in seeds:
-                rtheta1 = get_theta(theta)
-                rtheta2 = -get_theta(theta)
-                rbranches = get_branches(branches)
-                for b in range(rbranches):
-                    nv = Vector(*v)
-                    btheta = rtheta1 - b * ((rtheta1 - rtheta2) / (rbranches - 1))
-                    nv.rotate2d(v_zero(2), btheta)
-                    nv *= get_ratio(ratio)
-                    self.add_line(*self.on_screen(*t), *self.on_screen(*(t + nv)), color=color)
-                    new_seeds.append([t + nv, nv])
+        if self.iter != iter or self.theta != theta or self.ratio != ratio or self.branches != branches:
+            seeds = []
+            if iter:
+                self.add_line(0, 0, 0, 4, color=palette[0])
+                seeds.append([Vector(0, 4), Vector(0, 4)])
+            for i in range(iter):
+                if i < 5:
+                    color = palette[i]
+                else:
+                    color = palette[5]
+                new_seeds = []
+                for t, v in seeds:
+                    rtheta1 = get_theta(theta)
+                    rtheta2 = -get_theta(theta)
+                    rbranches = get_branches(branches)
+                    for b in range(rbranches):
+                        nv = Vector(*v)
+                        btheta = rtheta1 - b * ((rtheta1 - rtheta2) / (rbranches - 1))
+                        nv.rotate2d(btheta)
+                        nv *= get_ratio(ratio)
+                        self.add_line(*t, *(t + nv), color=color)
+                        new_seeds.append([t + nv, nv])
+                del seeds
+                seeds = new_seeds
             del seeds
-            seeds = new_seeds
-        del seeds
-        self.flush()
+            self.flush()
+            self.iter = iter
+            self.theta = theta
+            self.ratio = ratio
+            self.branches = branches
 
     def resize(self, width, height):
         self.refit(width, height - 200)
@@ -154,20 +161,20 @@ class Tree3D(pyg.screen.Screen3D):
         """
         Renders the screen.
         """
-        if self.get_val('iter') != self.iter or self.get_val('theta') != self.theta or self.get_val('ratio') != self.ratio or self.get_val('branches') != self.branches:
+        iter = self.get_val('iter')
+        theta = self.get_val('theta')
+        ratio = self.get_val('ratio')
+        branches = self.get_val('branches')
+        if self.iter != iter or self.theta != theta or self.ratio != ratio or self.branches != branches:
             #self.add_line(-5000, 0, 0, 5000, 0, 0, color=(255, 0, 0))
             #self.add_line(0, -5000, 0, 0, 5000, 0, color=(0, 255, 0))
             #self.add_line(0, 0, -5000, 0, 0, 5000, color=(0, 0, 255))
 
             self.add_quad(-200, -200, 0, 200, -200, 0, 200, 200, 0, -200, 200, 0, color=(40, 40, 40))
 
-            iter = self.get_val('iter')
-            theta = self.get_val('theta')
             dist = 50
-            ratio = self.get_val('ratio')
-            branches = self.get_val('branches')
             seeds = []
-            d = ~(Vector(0, 0, 1).rotate3d(v_zero(3), v_i(), 0))
+            d = ~Vector(0, 0, 1)
             if iter:
                 self.add_line(0, 0, 0, *(d * dist), color=palette[0])
                 seeds.append((d * dist, d * dist))
@@ -183,9 +190,9 @@ class Tree3D(pyg.screen.Screen3D):
                     for b in range(rbranches):
                         nv = Vector(*v)
                         rtheta = get_theta(theta)
-                        axis2d = Vector(1, 0).rotate2d(v_zero(2), theta1 + b * 360 / branches)
+                        axis2d = Vector(1, 0).rotate2d(theta1 + b * 360 / branches)
                         axis = Vector(*axis2d, 0)
-                        nv.rotate3d(v_zero(3), axis, rtheta)
+                        nv.rotate3d(rtheta, axis)
                         nv *= get_ratio(ratio)
                         self.add_line(*t, *(t + nv), color=color)
                         new_seeds.append([t + nv, nv])

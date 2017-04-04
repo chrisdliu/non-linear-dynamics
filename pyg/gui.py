@@ -10,19 +10,26 @@ import pyglet.window as _win
 from pyg.valset import *
 
 
-class GuiObj:
+def rdim(x, y, w, h):
+    return x, y, x + w, y, x + w, y + h, x, y + h
+
+
+class GuiObject:
     """
     Basic gui object class (boxes, labels).
 
     :var x: x coord
     :var y: y coord
-    :var z: z level
     :var w: width
     :var h: height
     :var visible: if the gui object is drawn
     """
 
-    def __init__(self, x, y, width, height, batch, z=0, visible=True):
+    og0 = _graphics.OrderedGroup(0)
+    og1 = _graphics.OrderedGroup(1)
+    og2 = _graphics.OrderedGroup(2)
+
+    def __init__(self, x, y, width, height, batch, parent, visible=True):
         """
         Gui object constructor.
 
@@ -36,19 +43,15 @@ class GuiObj:
         :param height: height
         :type batch: pyglet.graphics.Batch
         :param batch: the window's batch
-        :type z: int
-        :param z: z level
         :type visible: bool
         :param visible: if the gui object is drawn
         """
         self.x = x
         self.y = y
-        self.z = z
         self.w = width
         self.h = height
         self._batch = batch
-        self._vertex_lists = []
-        self.group = _graphics.OrderedGroup(z)
+        self._parent = parent
         self.visible = visible
 
     def set_pos(self, x, y):
@@ -63,7 +66,7 @@ class GuiObj:
         self.x = x
         self.y = y
 
-    def set_size(self, w, h):
+    def set_size(self, width, height):
         """
         Sets the gui object's dimensions
 
@@ -73,8 +76,8 @@ class GuiObj:
         :param h: height
         :return:
         """
-        self.w = w
-        self.h = h
+        self.w = width
+        self.h = height
 
     def set_visible(self, visible):
         """
@@ -88,8 +91,18 @@ class GuiObj:
         self.visible = visible
         if visible:
             self.render()
-        else:
-            self._clear()
+
+    def on(self):
+        """
+        Sets visible to True
+        """
+        self.set_visible(True)
+
+    def off(self):
+        """
+        Sets visible to False
+        """
+        self.set_visible(False)
 
     def render(self):
         """
@@ -99,30 +112,19 @@ class GuiObj:
         """
         pass
 
-    def _clear(self):
-        for vlist in self._vertex_lists:
-            vlist.delete()
-        self._vertex_lists.clear()
 
-    def _add_vlist(self, vlist):
-        self._vertex_lists.append(vlist)
-
-
-class Label(GuiObj):
+class Label(GuiObject):
     """
     A label class (text).
 
     :var x: x coord
     :var y: y coord
-    :var z: z level
-    :var w: width
-    :var h: height
     :var text: text
     :var color: color
-    :var visible: if the gui object is drawn
+    :var visible: if the label is drawn
     """
 
-    def __init__(self, x, y, text, batch, color=(255, 255, 255)):
+    def __init__(self, x, y, text, batch, parent, color=(255, 255, 255), visible=True, **kwargs):
         """
         Label constructor.
 
@@ -137,10 +139,11 @@ class Label(GuiObj):
         :type color: list(int * 3)
         :param color: color
         """
-        super().__init__(x, y, 0, 0, batch, 6)
+        super().__init__(x, y, 0, 0, batch, parent, visible)
         self.text = text
         self._pyglet_label = _text.Label(text, font_name='Menlo', font_size=8, x=x, y=y, batch=batch,
-                                         group=self.group, color=(*color, 255))
+                                         group=self.og2, color=(*color, 255), **kwargs)
+        self.set_visible(visible)
 
     def set_pos(self, x, y):
         super().set_pos(x, y)
@@ -161,66 +164,11 @@ class Label(GuiObj):
         :type text: str
         :param text: text
         """
-        self._pyglet_label.text = text
+        self.text = text
+        self.set_visible(self.visible)
 
 
-class Box(GuiObj):
-    """
-    A box class.
-
-    :var x: x coord
-    :var y: y coord
-    :var z: z level
-    :var w: width
-    :var h: height
-    :var color: color
-    :var visible: if the box is drawn
-    """
-
-    def __init__(self, x, y, width, height, batch, z=0, color=(255, 255, 255)):
-        """
-        Box constructor.
-
-        :type x: float
-        :param x: x coord
-        :type y: float
-        :param y: y coord
-        :type width: float
-        :param width: width
-        :type height: float
-        :param height: height
-        :type batch: pyglet.graphics.Batch
-        :param batch: the window's batch
-        :type z: int
-        :param z: z level
-        :type color: list(int * 3)
-        :param color: color
-        """
-        super().__init__(x, y, width, height, batch, z=z)
-        self.color = color
-
-    def set_color(self, r, g, b):
-        """
-        Sets the color of the box.
-
-        :type r: int
-        :param r: red
-        :type g: int
-        :param g: green
-        :type b: int
-        :param b: blue
-        """
-        self.color = (r, g, b)
-
-    def render(self):
-        self._clear()
-        self._add_vlist(self._batch.add(4, _gl.GL_QUADS, self.group,
-                                        ('v3f', (self.x, self.y, self.z, self.x + self.w, self.y, self.z,
-                                                 self.x + self.w, self.y + self.h, self.z, self.x, self.y + self.h, self.z)),
-                                        ('c3B', self.color * 4)))
-
-
-class GuiComp:
+class GuiComponent(GuiObject):
     """
     Base gui component (buttons, fields, sliders) class.
 
@@ -228,14 +176,15 @@ class GuiComp:
     :var y: y coord
     :var w: width
     :var h: height
+    :var visible: if the component is drawn
     :var focusable: if the component can be in focus
     :var is_focus: if the component is in focus
     :var is_hover: if the mouse is hovering over the component
-    :var visible: if the component is drawn
-    :var guiobjs: dictionary of gui objects
     """
 
-    def __init__(self, x, y, width, height, batch, focusable=False, visible=True):
+    _vertex_types = ('quads',)
+
+    def __init__(self, x, y, width, height, batch, parent, focusable=False, visible=True, interfaced=False):
         """
         Gui component constructor.
 
@@ -254,67 +203,21 @@ class GuiComp:
         :type visible: bool
         :param visible: if the gui component is drawn
         """
-        self.x = x
-        self.y = y
-        self.w = width
-        self.h = height
-        self._batch = batch
+        super().__init__(x, y, width, height, batch, parent, visible)
         self.focusable = focusable
         self.is_focus = False
         self.is_hover = False
-        self.visible = visible
-        self.guiobjs = {}
+        self.interfaced = interfaced
 
-    def set_pos(self, x, y):
-        """
-        Sets the position of the gui component.
+        self.labels = {}
 
-        :type x: int
-        :param x: x coord
-        :type x: int
-        :param y: y coord
-        """
-        self.x = x
-        self.y = y
-
-    def set_size(self, width, height):
-        """
-        Sets the size of the gui component.
-
-        :type width: int
-        :param width: width
-        :type height: int
-        :param height: height
-        """
-        self.w = width
-        self.h = height
-
-    def set_visible(self, visible):
-        """
-        Sets the visible field.
-        If visible is True, it is rendered.
-        If visible is False, it is unrendered.
-
-        :type visible: bool
-        :param visible: visible
-        """
-        self.visible = visible
-        for guiobj in self.guiobjs.values():
-            guiobj.set_visible(visible)
-        if visible:
-            self.render()
-
-    def on(self):
-        """
-        Sets visible to True
-        """
-        self.set_visible(True)
-
-    def off(self):
-        """
-        Sets visible to False
-        """
-        self.set_visible(False)
+        self._vertex_lists = {}
+        self._vertexes = {}
+        self._colors = {}
+        for vtype in self._vertex_types:
+            self._vertex_lists[vtype] = None
+            self._vertexes[vtype] = []
+            self._colors[vtype] = []
 
     def focus_on(self):
         """
@@ -357,70 +260,82 @@ class GuiComp:
         """
         return self.x <= x < self.x + self.w and self.y <= y < self.y + self.h
 
-    def add_label(self, name, x, y, text, color=(255, 255, 255)):
-        """
-        Adds a label to the gui object dictionary.
+    def set_visible(self, visible):
+        self.visible = visible
+        if visible:
+            self.render()
+        else:
+            for vtype in self._vertex_types:
+                if self._vertex_lists[vtype]:
+                    self._vertex_lists[vtype].delete()
+                self._vertex_lists[vtype] = None
+        for label in self.labels.values():
+            label.set_visible(visible)
 
-        :type name: str
-        :param name: the label's name
-        :type x: float
-        :param x: x coord
-        :type y: float
-        :param y: y coord
-        :type text: str
-        :param text: text
+    def add_label(self, name, x, y, text, color=(255, 255, 255), **kwargs):
+        self.labels[name] = Label(x, y, text, self._batch, self._parent, color=color, **kwargs)
+
+    def add_quad(self, x1, y1, x2, y2, x3, y3, x4, y4, color=(0, 0, 0), uniform=True, colors=None):
+        """
+        Adds a quadrilateral to be drawn.
+        If uniform, draws using color parameter.
+        If non-uniform, draws using colors parameter.
+
+        :type x1: float
+        :param x1: x1
+        :type y1: float
+        :param y1: y1
+        :type x2: float
+        :param x2: x2
+        :type y2: float
+        :param y2: y2
+        :type x3: float
+        :param x3: x3
+        :type y3: float
+        :param y3: y3
+        :type x4: float
+        :param x4: x4
+        :type y4: float
+        :param y4: y4
+        :type z: float
+        :param z: z
         :type color: list(int * 3)
         :param color: color
+        :type uniform: bool
+        :param uniform: uniform coloring
+        :type colors: list(int * 12)
+        :param colors: non-uniform coloring
         """
-        if name in self.guiobjs:
-            raise KeyError('GuiObj with name already exists!')
-        self.guiobjs[name] = Label(x, y, text, self._batch, color)
-
-    def add_box(self, name, x, y, w, h, z=0, color=(255, 255, 255)):
-        """
-        Adds a box to the gui object dictionary.
-
-        :type name: str
-        :param name: the box's name
-        :type x: float
-        :param x: x coord
-        :type y: float
-        :param y: y coord
-        :type w: float
-        :param w: width
-        :type h: float
-        :param h: height
-        :type z: int
-        :param z: z level
-        :type text: str
-        :param text: text
-        :type color: list(int * 3)
-        :param color: color
-        """
-        if name in self.guiobjs:
-            raise KeyError('GuiObj with name already exists!')
-        self.guiobjs[name] = Box(x, y, w, h, self._batch, z, color)
+        self._vertexes['quads'].extend((x1, y1, x2, y2, x3, y3, x4, y4))
+        if uniform:
+            self._colors['quads'].extend(color * 4)
+        else:
+            self._colors['quads'].extend(colors)
 
     def render(self):
-        """
-        Sets parameters for the gui objects.
-        self.flush() must be called at the end.
-        Should be overridden.
-        """
         pass
 
     def flush(self):
-        """
-        Renders all the gui objects in its dictionary.
-        """
-        for guiobj in self.guiobjs.values():
-            guiobj.render()
+        for vtype in self._vertex_types:
+            if self._vertex_lists[vtype]:
+                self._vertex_lists[vtype].delete()
+                self._vertex_lists[vtype] = None
+            if not self.visible:
+                continue
 
-    def key_down(self, symbol, modifiers):
-        pass
+            if vtype == 'quads':
+                vlist = self._batch.add(len(self._vertexes[vtype]) // 2, _gl.GL_QUADS, self.og0,
+                                        ('v2f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+            else:
+                vlist = None
+            self._vertex_lists[vtype] = vlist
 
-    def text_input(self, text):
-        pass
+        self._clear()
+
+    def _clear(self):
+        for vtype in self._vertex_types:
+            self._vertexes[vtype].clear()
+            self._colors[vtype].clear()
 
     def mouse_down(self, x, y, buttons, modifiers):
         pass
@@ -431,8 +346,14 @@ class GuiComp:
     def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         pass
 
+    def key_down(self, symbol, modifiers):
+        pass
 
-class Button(GuiComp):
+    def text_input(self, text):
+        pass
+
+
+class Button(GuiComponent):
     """
     A button class.
 
@@ -449,7 +370,7 @@ class Button(GuiComp):
     :var guiobjs: dictionary of gui objects
     """
 
-    def __init__(self, x, y, width, height, text, batch, action=None):
+    def __init__(self, x, y, width, height, text, batch, parent, action=None, argsfunc=None, visible=True, interfaced=False):
         """
         Button constructor.
 
@@ -468,19 +389,21 @@ class Button(GuiComp):
         :type action: function
         :param action: the function called when pressed
         """
-        super().__init__(x, y, width, height, batch, True)
+        super().__init__(x, y, width, height, batch, parent, True, visible, interfaced)
         self.action = action
-        self.add_label('label', x, y, text)
-        self.add_box('box', x, y, width, height, color=(90, 90, 90))
-
-    def set_pos(self, x, y):
-        super().set_pos(x, y)
-        self.guiobjs['label'].set_pos(x, y)
-        self.guiobjs['box'].set_pos(x, y)
+        self.argsfunc = argsfunc
+        self.add_label('label', x, y + height, text, anchor_y='top', width=width, multiline=True)
 
     def mouse_up(self, x, y, buttons, modifiers):
         if self.action:
-            self.action()
+            if self.argsfunc:
+                self.action(*self.argsfunc())
+            else:
+                self.action()
+    
+    def set_pos(self, x, y):
+        super().set_pos(x, y)
+        self.labels['label'].set_pos(x, y)
 
     def set_text(self, text):
         """
@@ -489,15 +412,16 @@ class Button(GuiComp):
         :type text: str
         :param text: button text
         """
-        self.guiobjs['label'].set_text(text)
+        self.labels['label'].set_text(text)
 
     def render(self):
         if self.is_focus:
-            self.guiobjs['box'].set_color(150, 150, 150)
+            color = (150, 150, 150)
         elif self.is_hover:
-            self.guiobjs['box'].set_color(120, 120, 120)
+            color = (120, 120, 120)
         else:
-            self.guiobjs['box'].set_color(90, 90, 90)
+            color = (90, 90, 90)
+        self.add_quad(*rdim(self.x, self.y, self.w, self.h), color=color)
         self.flush()
 
 
@@ -518,7 +442,7 @@ class ToggleButton(Button):
     :var guiobjs: dictionary of gui objects
     """
 
-    def __init__(self, x, y, width, height, text, boolval, batch):
+    def __init__(self, x, y, width, height, text, boolval, batch, parent, visible=True, interfaced=False):
         """
         Toggle button constructor.
 
@@ -537,8 +461,12 @@ class ToggleButton(Button):
         :type batch: pyglet.graphics.Batch
         :param batch: the window's batch
         """
+        
+        # has to know value before render
+        # does it render on init?
         self.boolval = boolval
-        super().__init__(x, y, width, height, text, batch, action=self.toggle)
+        super().__init__(x, y, width, height, text, batch, parent, self.toggle, None, visible, interfaced)
+        self.add_label('label', x, y, text)
 
     def toggle(self):
         """
@@ -549,39 +477,38 @@ class ToggleButton(Button):
 
     def set_pos(self, x, y):
         super().set_pos(x, y)
-        self.guiobjs['label'].set_pos(x, y)
-        self.guiobjs['box'].set_pos(x, y)
+        self.labels['label'].set_pos(x, y)
 
     def render(self):
         if self.boolval.value:
             if self.is_focus:
-                self.guiobjs['box'].set_color(50, 150, 50)
+                color = (50, 150, 50)
             elif self.is_hover:
-                self.guiobjs['box'].set_color(30, 120, 30)
+                color = (30, 120, 30)
             else:
-                self.guiobjs['box'].set_color(10, 90, 10)
+                color = (10, 90, 10)
         else:
             if self.is_focus:
-                self.guiobjs['box'].set_color(150, 50, 50)
+                color = (150, 50, 50)
             elif self.is_hover:
-                self.guiobjs['box'].set_color(120, 30, 30)
+                color = (120, 30, 30)
             else:
-                self.guiobjs['box'].set_color(90, 10, 10)
+                color = (90, 10, 10)
+        self.add_quad(*rdim(self.x, self.y, self.w, self.h), color=color)
         self.flush()
 
 
-class Field(GuiComp):
+class Field(GuiComponent):
     accepted = ()
 
-    def __init__(self, x, y, w, h, name, valobj, batch):
-        super().__init__(x, y, w, h, batch, True)
+    def __init__(self, x, y, w, h, name, valobj, batch, parent, visible=True, interfaced=False):
+        super().__init__(x, y, w, h, batch, parent, True, visible, interfaced)
         self.name = name
         self.valobj = valobj
         self.input = ''
         self.input_accepted = False
         self.input_valid = False
         self.add_label('label', x, y, self.get_label_text())
-        self.add_box('box', x, y, w, h, color=(90, 90, 90))
 
     def focus_on(self):
         self.input = ''
@@ -590,14 +517,13 @@ class Field(GuiComp):
         super().focus_on()
 
     def focus_off(self):
-        self.valobj.set_val_cast(self.input)
+        self.valobj.set_val(self.input)
         self.input = ''
         super().focus_off()
 
     def set_pos(self, x, y):
         super().set_pos(x, y)
-        self.guiobjs['label'].set_pos(x, y)
-        self.guiobjs['box'].set_pos(x, y)
+        self.labels['label'].set_pos(x, y)
 
     def key_down(self, symbol, modifiers):
         if symbol == _win.key.ENTER:
@@ -621,34 +547,26 @@ class Field(GuiComp):
             return '%s: %s' % (self.name, str(self.valobj))
 
     def update_label(self):
-        self.guiobjs['label'].set_text(self.get_label_text())
+        self.labels['label'].set_text(self.get_label_text())
 
     def update_color(self):
-        parsed = self.valobj.parse(self.input)
-        if parsed is not None:
-            self.input_accepted = True
-            if self.valobj.is_valid(parsed):
-                self.input_valid = True
-            else:
-                self.input_valid = False
-        else:
-            self.input_accepted = False
-            self.input_valid = False
+        self.input_accepted, self.input_valid = self.valobj.status(self.input)
         self.render()
 
     def render(self):
         self.update_label()
         if self.is_focus:
             if self.input_valid:
-                self.guiobjs['box'].set_color(80, 150, 80)
+                color = (80, 150, 80)
             elif self.input_accepted:
-                self.guiobjs['box'].set_color(80, 80, 150)
+                color = (80, 80, 150)
             else:
-                self.guiobjs['box'].set_color(150, 50, 50)
+                color = (150, 50, 50)
         elif self.is_hover:
-            self.guiobjs['box'].set_color(120, 120, 120)
+            color = (120, 120, 120)
         else:
-            self.guiobjs['box'].set_color(90, 90, 90)
+            color = (90, 90, 90)
+        self.add_quad(*rdim(self.x, self.y, self.w, self.h), color=color)
         self.flush()
 
 
@@ -661,17 +579,17 @@ class NumberField(Field):
 
 
 class IntField(NumberField):
-    def __init__(self, x, y, w, h, name, valobj, batch):
+    def __init__(self, x, y, w, h, name, valobj, batch, parent, visible=True, interfaced=False):
         if type(valobj) is not IntValue:
             raise TypeError('Value object is not a IntValue!')
-        super().__init__(x, y, w, h, name, valobj, batch)
+        super().__init__(x, y, w, h, name, valobj, batch, parent, visible, interfaced)
 
 
 class FloatField(NumberField):
-    def __init__(self, x, y, w, h, name, valobj, batch):
+    def __init__(self, x, y, w, h, name, valobj, batch, parent, visible=True, interfaced=False):
         if type(valobj) is not FloatValue:
             raise TypeError('Value object is not a FloatValue!')
-        super().__init__(x, y, w, h, name, valobj, batch)
+        super().__init__(x, y, w, h, name, valobj, batch, parent, visible, interfaced)
 
 
 class ComplexField(NumberField):
@@ -682,67 +600,205 @@ class ComplexField(NumberField):
         'j',
     )
 
-    def __init__(self, x, y, w, h, name, valobj, batch):
+    def __init__(self, x, y, w, h, name, valobj, batch, parent, visible=True, interfaced=False):
         if type(valobj) is not ComplexValue:
             raise TypeError('Value object is not a ComplexValue!')
-        super().__init__(x, y, w, h, name, valobj, batch)
+        super().__init__(x, y, w, h, name, valobj, batch, parent, visible, interfaced)
 
 
-class Slider(GuiComp):
-    def __init__(self, x, y, w, h, offs, field_name, valobj, low, high, batch):
-        super().__init__(x, y, w, h, batch, True)
-        self.offs = offs
-        self.field_name = field_name
+class Slider(GuiComponent):
+    def __init__(self, x, y, w, h, valobj, batch, parent, low=None, high=None, visible=True, interfaced=False):
+        super().__init__(x, y, w, h, batch, parent, True, visible, interfaced)
         self.valobj = valobj
-        self.low = low
-        self.high = high
-        self._slider_pos = (valobj.value - low) / (high - low)
-        self.add_label('label', x, y, self.get_label_text())
-        self.add_box('box', x, y, w, h, color=(90, 90, 90))
-        self.add_box('bar', x + self._slider_pos * w + offs, y, 2, h, z=1, color=(240, 0, 240))
+        if low is None:
+            self.low = valobj.low
+            self.high = valobj.high
+        else:
+            self.low = low
+            self.high = high
+        self.update_slider_pos()
 
-    def update_pos(self):
-        self._slider_pos = (self.valobj.value - self.low) / (self.high - self.low)
-        self.guiobjs['label'].set_text(self.get_label_text())
-        self.render()
+    def update_slider_pos(self):
+        if self.low != self.high:
+            self._slider_pos = (self.valobj.value - self.low) / (self.high - self.low)
+        else:
+            self._slider_pos = 0
+
+    def set_high(self, high):
+        if self.high != high and high >= self.low:
+            self.high = high
+            self.update_slider_pos()
+            new_value = (self._slider_pos * (self.high - self.low)) + self.low
+            self.valobj.set_val(new_value)
+            self.render()
+
+    def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        raise NotImplementedError
+
+    def render(self):
+        raise NotImplementedError
+
+
+class HSlider(Slider):
+    def __init__(self, x, y, w, h, field_name, valobj, batch, parent, low=None, high=None, visible=True, interfaced=False):
+        super().__init__(x, y, w, h, valobj, batch, parent, low, high, visible, interfaced)
+        self.field_name = field_name
+        self.add_label('label', x, y, self.get_label_text())
+
+    def set_pos(self, x, y):
+        super().set_pos(x, y)
+        self.labels['label'].set_pos(x, y)
+
+    def update_slider_pos(self):
+        super().update_slider_pos()
+        self.labels['label'] = self.get_label_text()
 
     def get_label_text(self):
         return self.field_name + ': ' + str(self.valobj.value)
 
-    def is_inside(self, x, y):
-        return self.x <= x < self.x + self.w + self.offs and self.y <= y < self.y + self.h
-
     def render(self):
         if self.is_focus:
-            self.guiobjs['box'].set_color(150, 150, 150)
+            color = (150, 150, 150)
         elif self.is_hover:
-            self.guiobjs['box'].set_color(120, 120, 120)
+            color = (120, 120, 120)
         else:
-            self.guiobjs['box'].set_color(90, 90, 90)
-        self.guiobjs['bar'].set_pos(self.x + self._slider_pos * self.w + self.offs, self.y)
+            color = (90, 90, 90)
+        self.add_quad(*rdim(self.x, self.y, self.w, self.h), color=color)
+        self.add_quad(*rdim(self.x + self._slider_pos * self.w, self.y, 2, self.h), color=(240, 0, 240))
         self.flush()
 
     def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
-        self._slider_pos = (x - self.offs) / self.w
+        self._slider_pos = x / self.w
         if self._slider_pos < 0:
             self._slider_pos = 0
         if self._slider_pos > 1:
             self._slider_pos = 1
         new_value = (self._slider_pos * (self.high - self.low)) + self.low
-        self.valobj.set_val_cast(new_value)
-        self.guiobjs['label'].set_text(self.get_label_text())
+        self.valobj.set_val(new_value)
+        self.labels['label'].set_text(self.get_label_text())
         self.render()
 
 
-class IntSlider(Slider):
-    def __init__(self, x, y, w, h, offs, field_name, valobj, low, high, batch):
+class IntHSlider(HSlider):
+    def __init__(self, x, y, w, h, field_name, valobj, batch, parent, low=None, high=None, visible=True, interfaced=False):
         if type(valobj) is not IntValue:
             raise TypeError('Value object is not IntValue!')
-        super().__init__(x, y, w, h, offs, field_name, valobj, low, high, batch)
+        super().__init__(x, y, w, h, field_name, valobj, batch, parent, low, high, visible, interfaced)
+
+    def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        self._slider_pos = x / self.w
+        if self._slider_pos < 0:
+            self._slider_pos = 0
+        if self._slider_pos > 1:
+            self._slider_pos = 1
+        new_value = (self._slider_pos * (self.high - self.low)) + self.low
+        self.valobj.set_val(new_value + .5)
+        self.labels['label'].set_text(self.get_label_text())
+        self.render()
 
 
-class FloatSlider(Slider):
-    def __init__(self, x, y, w, h, offs, field_name, valobj, low, high, batch):
+class FloatHSlider(HSlider):
+    def __init__(self, x, y, w, h, field_name, valobj, batch, parent, low=None, high=None, visible=True, interfaced=False):
         if type(valobj) is not FloatValue:
             raise TypeError('Value object is not FloatValue!')
-        super().__init__(x, y, w, h, offs, field_name, valobj, low, high, batch)
+        super().__init__(x, y, w, h, field_name, valobj, batch, parent, low, high, visible, interfaced)
+
+
+class VSlider(Slider):
+    def __init__(self, x, y, w, h, valobj, batch, parent, low=None, high=None, visible=True, interfaced=False):
+        super().__init__(x, y, w, h, valobj, batch, parent, low, high, visible, interfaced)
+        self.update_slider_pos()
+
+    def render(self):
+        if self.is_focus:
+            color = (150, 150, 150)
+        elif self.is_hover:
+            color = (120, 120, 120)
+        else:
+            color = (90, 90, 90)
+        self.add_quad(*rdim(self.x, self.y, self.w, self.h), color=color)
+        self.add_quad(*rdim(self.x, self.y + self.h - self._slider_pos * self.h, self.w, 2), color=(240, 0, 240))
+        self.flush()
+
+    def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        self._slider_pos = (self.h - y) / self.h
+        if self._slider_pos < 0:
+            self._slider_pos = 0
+        if self._slider_pos > 1:
+            self._slider_pos = 1
+        new_value = (self._slider_pos * (self.high - self.low)) + self.low
+        self.valobj.set_val(new_value)
+        self.render()
+
+
+class IntVSlider(VSlider):
+    def __init__(self, x, y, w, h, valobj, batch, parent, low=None, high=None, visible=True, interfaced=False):
+        if type(valobj) is not IntValue:
+            raise TypeError('Value object is not IntValue!')
+        super().__init__(x, y, w, h, valobj, batch, parent, low, high, visible, interfaced)
+
+    def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        self._slider_pos = (self.h - y) / self.h
+        if self._slider_pos < 0:
+            self._slider_pos = 0
+        if self._slider_pos > 1:
+            self._slider_pos = 1
+        new_value = (self._slider_pos * (self.high - self.low)) + self.low
+        self.valobj.set_val(new_value + .5)
+        self.render()
+
+
+class LabelRowSlider(IntVSlider):
+    def __init__(self, x, y, w, h, valobj, labelrow, batch, parent, low=None, high=None, visible=True):
+        super().__init__(x, y, w, h, valobj, batch, parent, low, high, visible, True)
+        self.labelrow = labelrow
+
+    def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        super().mouse_drag(x, y, dx, dy, buttons, modifiers)
+        if self.labelrow:
+            self.labelrow.render()
+
+
+class LabelRow(GuiComponent):
+    def __init__(self, name, x, y, w, h, maxchars, maxrows, rowfunc, batch, parent, visible=True, interfaced=False):
+        super().__init__(x, y, w, h, batch, parent, False, visible, interfaced)
+        self.name = name
+        self.maxchars = maxchars
+        self.maxrows = maxrows
+        self.rowfunc = rowfunc
+
+        parent.add_int_value(name + '__intvalue', limit='ul', low=0, high=0)
+        self.valobj = parent.get_valobj(name + '__intvalue')
+        parent.sliders[name + '__intvslider'] = LabelRowSlider(x + w - 10, y, 10, h, self.valobj, self, self._batch, parent, visible=visible)
+        self.slider = parent.sliders[name + '__intvslider']
+
+        for i in range(maxrows):
+            self.add_label(i, x + 5, y + h - (i + 1) * (h / maxrows) + 5, '')
+
+    def render(self):
+        self.add_quad(*rdim(self.x, self.y, self.w - 10, self.h), color=(50, 50, 50))
+        for i in range(self.maxrows):
+            self.labels[i].set_text('')
+        rows = self.rowfunc()
+        if len(rows) > 5:
+            diff = len(rows) - 5 - self.valobj.high
+            self.valobj.high = len(rows) - 5
+            if diff < 0:
+                self.valobj.set_val(self.valobj.value + diff)
+            self.slider.set_high(len(rows) - 5)
+            self.slider.update_slider_pos()
+            offs = self.valobj.value
+            for i in range(offs, offs + 5):
+                row = rows[i]
+                if len(row) > self.maxchars:
+                    row = row[:self.maxchars - 3] + '...'
+                self.labels[i - offs].set_text(row)
+        else:
+            self.slider.set_high(0)
+            self.slider.update_slider_pos()
+            for i, row in enumerate(rows):
+                if len(row) > self.maxchars:
+                    row = row[:self.maxchars - 3] + '...'
+                self.labels[i].set_text(row)
+        self.flush()
+        self.slider.render()

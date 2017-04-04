@@ -1,6 +1,7 @@
 """
 Defines value objects (Value) and value sets (ValSet) for accessing variables between gui components.
 """
+import re
 
 
 class Value(object):
@@ -26,27 +27,11 @@ class Value(object):
 
         :param new_value: a new value
         """
-        if self.is_valid(new_value):
+        new_value = self.cast(new_value)
+        if new_value is not None and self.is_valid(new_value):
             self.value = new_value
 
-    def set_val_cast(self, new_value):
-        """
-        The new value (usually as a string) is casted to the value type through self.parse and it sent to self.set_val.
-
-        :param new_value: a new value
-        """
-        parsed_value = self.parse(new_value)
-        if parsed_value is not None:
-            self.set_val(parsed_value)
-
-    def parse(self, new_value_cast):
-        """
-        Parses a new value string.
-        Should be overridden.
-
-        :param new_value_cast: the new value as a string
-        :return: the new value as the value's type
-        """
+    def cast(self, cast_value):
         return None
 
     def is_valid(self, new_value):
@@ -58,6 +43,16 @@ class Value(object):
         :rtype: bool
         """
         return True
+
+    def status(self, inputstr):
+        inputcast = self.cast(inputstr)
+        if inputcast is not None:
+            if self.is_valid(inputcast):
+                return True, True
+            else:
+                return True, False
+        else:
+            return False, False
 
 
 class NumberValue(Value):
@@ -136,16 +131,14 @@ class IntValue(NumberValue):
     def __str__(self):
         return '%i' % self.value
 
-    def parse(self, new_value_cast):
-        try:
-            return int(new_value_cast)
-        except ValueError:
-            return None
-
-    def is_valid(self, new_value):
-        if not isinstance(new_value, int):
-            raise TypeError('New value must be an int!')
-        return super().is_valid(new_value)
+    def cast(self, cast_value):
+        if isinstance(cast_value, int):
+            return cast_value
+        else:
+            try:
+                return int(cast_value)
+            except ValueError:
+                return None
 
 
 class FloatValue(NumberValue):
@@ -156,18 +149,16 @@ class FloatValue(NumberValue):
     """
 
     def __str__(self):
-        return '%.5f' % self.value
+        return str(round(self.value, 5))
 
-    def parse(self, new_value_cast):
-        try:
-            return float(new_value_cast)
-        except ValueError:
-            return None
-
-    def is_valid(self, new_value):
-        if not isinstance(new_value, float):
-            raise TypeError('New value must be a float!')
-        return super().is_valid(new_value)
+    def cast(self, cast_value):
+        if isinstance(cast_value, float):
+            return cast_value
+        else:
+            try:
+                return float(cast_value)
+            except ValueError:
+                return None
 
 
 class ComplexValue(NumberValue):
@@ -178,17 +169,18 @@ class ComplexValue(NumberValue):
     """
 
     def __str__(self):
-        return '%.3f + %.3fj' % (self.value.real, self.value.imag)
+        return '%f + %fj' % (round(self.value.real, 3), round(self.value.imag, 3))
 
-    def parse(self, new_value_cast):
-        try:
-            return complex(new_value_cast)
-        except ValueError:
-            return None
+    def cast(self, cast_value):
+        if isinstance(cast_value, complex):
+            return cast_value
+        else:
+            try:
+                return complex(cast_value)
+            except ValueError:
+                return None
 
     def is_valid(self, new_value):
-        if not isinstance(new_value, complex):
-            raise TypeError('New value must be a complex number!')
         if 'l' in self.limit:
             if 'l' in self.inclusive:
                 if abs(new_value) < self.low:
@@ -219,17 +211,42 @@ class BoolValue(Value):
         """
         self.value = not self.value
 
-    def parse(self, new_value_cast):
-        try:
-            return bool(new_value_cast)
-        except ValueError:
-            return None
+    def cast(self, cast_value):
+        if isinstance(cast_value, bool):
+            return cast_value
+        else:
+            try:
+                return bool(cast_value)
+            except ValueError:
+                return None
+
+
+class ColorValue(Value):
+    def __init__(self, value):
+        if isinstance(value, (list, tuple)) and self.is_valid(value):
+            self.value = self.cast(value)
+        elif isinstance(value, str) and self.is_valid(self.cast(value)):
+            self.value = self.cast(value)
+        else:
+            raise ValueError('Initial value is not valid!')
+
+    def cast(self, cast_value):
+        if isinstance(cast_value, (list, tuple)):
+            return list(cast_value)
+        elif isinstance(cast_value, str):
+            if re.match(r'#[0-9,A-F,a-f]{6}', cast_value):
+                return list(map(lambda x: int(x, 16), [cast_value[i:i+2] for i in range(1, 7, 2)]))
+            else:
+                return None
 
     def is_valid(self, new_value):
-        if not isinstance(new_value, bool):
-            raise TypeError('New value must be a bool!')
-        return True
-
+        if len(new_value) == 3:
+            for c in new_value:
+                if not isinstance(c, int) or c < 0 or c > 255:
+                    return False
+            return True
+        else:
+            return False
 
 class ValSet:
     """
@@ -310,6 +327,9 @@ class ValSet:
         :param value: the initial value
         """
         self.vals[name] = BoolValue(value)
+
+    def add_color_value(self, name, value):
+        self.vals[name] = ColorValue(value)
 
     def get_val(self, name):
         """

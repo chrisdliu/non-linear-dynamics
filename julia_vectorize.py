@@ -486,9 +486,9 @@ class JuliaWindow(pyg.window.Window):
 
         self.add_button('pal_left', 150, 5, 55, 15, 'Idx Left', self.palette_left)
         self.add_button('pal_right', 215, 5, 55, 15, 'Idx Right', self.palette_right)
-        self.add_int_slider('pal_r', 150, 70, 120, 15, 0, 'Red  ', self.get_valobj('pal_r'), low=0, high=255)
-        self.add_int_slider('pal_g', 150, 50, 120, 15, 0, 'Green', self.get_valobj('pal_g'), low=0, high=255)
-        self.add_int_slider('pal_b', 150, 30, 120, 15, 0, 'Blue ', self.get_valobj('pal_b'), low=0, high=255)
+        self.add_int_hslider('pal_r', 150, 70, 120, 15, 'Red  ', self.get_valobj('pal_r'), low=0, high=255)
+        self.add_int_hslider('pal_g', 150, 50, 120, 15, 'Green', self.get_valobj('pal_g'), low=0, high=255)
+        self.add_int_hslider('pal_b', 150, 30, 120, 15, 'Blue ', self.get_valobj('pal_b'), low=0, high=255)
         self.add_label('pal_label', 160, 90, 'Palette Index: %i' % self.get_val('pal_idx'))
 
         self.saved_coords_idx = 0
@@ -530,9 +530,9 @@ class JuliaWindow(pyg.window.Window):
         self.set_val('pal_r', main.palette[pal_idx][0])
         self.set_val('pal_g', main.palette[pal_idx][1])
         self.set_val('pal_b', main.palette[pal_idx][2])
-        self.get_slider('pal_r').update_pos()
-        self.get_slider('pal_g').update_pos()
-        self.get_slider('pal_b').update_pos()
+        self.get_slider('pal_r').update()
+        self.get_slider('pal_g').update()
+        self.get_slider('pal_b').update()
 
     def saved_coords_prev(self):
         mode = self.get_screen('main').mode
@@ -678,6 +678,11 @@ class JuliaWindow(pyg.window.Window):
             self.fields['c'].update_label()
             self.screens['main'].render()
 
+    def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        super().mouse_drag(x, y, dx, dy, buttons, modifiers)
+        if isinstance(self.focus, pyg.gui.Slider):
+            self.screens['main'].render()
+
     def key_down(self, symbol, modifiers):
         super().key_down(symbol, modifiers)
         if not self.focus:
@@ -699,4 +704,4 @@ class JuliaWindow(pyg.window.Window):
                     self.saved_coords_delete()
 
 
-pyg.run(JuliaWindow, caption='Julia Graph')
+pyg.run(JuliaWindow, 500, 700, caption='Julia Graph')

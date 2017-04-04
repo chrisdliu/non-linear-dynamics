@@ -1,19 +1,20 @@
 """
 A graphics package using pyglet.
 
-ORDERED GROUPS:
-1: buttons
-2: labels
-
 TODO:
 finish documentation.
 status line at bottom?
-let opengl do graphscreen zoom? test speeds
 move required functions into on_(action), change overridden functions to (action)
 Remove visible from constructors. ??? why ???
 3dscreen: maximum zoom conflict with background
-make gui, screen, valset, and window modules
 make sure mouse coordinates are consistent
+add generic slider superclass
+look over click logic
+button hover while clicked
+resize vertex_list vs creating new one?
+add updatefunc to sliders
+is there any point of having focusable
+redo focus logic for more modularity
 """
 
 
@@ -26,7 +27,7 @@ from . import valset
 from . import window
 
 
-def run(WindowCls, width=500, height=700, caption='Caption Here', ticktime=0):
+def run(WindowCls, width, height, caption='Caption Here', bg=(0, 0, 0), ticktime=0):
     """
     Runs pyglet using a provided Window subclass.
 
@@ -41,6 +42,6 @@ def run(WindowCls, width=500, height=700, caption='Caption Here', ticktime=0):
     :type ticktime: float
     :param ticktime: interval between ticks in seconds, zero to disable ticking
     """
-    WindowCls(width=width, height=height, caption=caption, bg=(0, 0, 0, 1), ticktime=ticktime, resizable=True)
+    WindowCls(width=width, height=height, caption=caption, bg=bg, ticktime=ticktime, resizable=True)
     import pyglet
     pyglet.app.run()

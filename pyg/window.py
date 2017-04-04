@@ -29,7 +29,7 @@ class Window(_win.Window):
     :var valset: the window's valset
     """
 
-    def __init__(self, width=600, height=600, caption='Window Caption', bg=(0, 0, 0), ticktime=0, *args, **kwargs):
+    def __init__(self, width, height, caption='Window Caption', bg=(0, 0, 0), ticktime=0, *args, **kwargs):
         """
         Window constructor.
 
@@ -47,8 +47,9 @@ class Window(_win.Window):
         super().__init__(width=width, height=height, caption=caption, *args, **kwargs)
         self.set_minimum_size(width, height)
 
-        glClearColor(*[_floor(color % 256) / 255 for color in bg], 1)
-        self.bg = bg
+        self.set_bg(bg)
+        # glClearColor(*[_floor(color % 256) / 255 for color in bg], 1)
+        # self.bg = bg
 
         self._batch = _graphics.Batch()
         self.screens = {}
@@ -56,11 +57,13 @@ class Window(_win.Window):
         self.labels = {}
         self.fields = {}
         self.sliders = {}
+        self.labelrows = {}
+        self.colorpickers = {}
         self.valset = ValSet()
 
         self.focus = None
         self.hover = None
-        self.mouse = False
+        self.mousedown = False
 
         self.set_vars()
         self.update_labels()
@@ -112,7 +115,24 @@ class Window(_win.Window):
         """
         self.screens[name] = screen
 
-    def add_button(self, name, x, y, width, height, text, action=None):
+    def add_label(self, name, x=0, y=0, text='', color=(255, 255, 255), visible=True):
+        """
+        Adds a label.
+
+        :type name: str
+        :param name: the label's name
+        :type x: float
+        :param x: x coord
+        :type y: float
+        :param y: y coord
+        :type text: str
+        :param text: label text
+        :type color: list(int * 3)
+        :param color: color
+        """
+        self.labels[name] = Label(x, y, text, self._batch, self, color, visible)
+
+    def add_button(self, name, x, y, width, height, text, action=None, argsfunc=None, visible=True, interfaced=False):
         """
         Adds a button.
 
@@ -131,9 +151,9 @@ class Window(_win.Window):
         :type action: function
         :param action: function called when pressed
         """
-        self.buttons[name] = Button(x, y, width, height, text, self._batch, action=action)
+        self.buttons[name] = Button(x, y, width, height, text, self._batch, self, action, argsfunc, visible, interfaced)
 
-    def add_toggle_button(self, name, x, y, width, height, text, boolval):
+    def add_toggle_button(self, name, x, y, width, height, text, boolval, visible=True, interfaced=False):
         """
         Adds a toggle button.
 
@@ -152,36 +172,26 @@ class Window(_win.Window):
         :type boolval: BoolValue
         :param boolval: the bool value linked with the button
         """
-        self.buttons[name] = ToggleButton(x, y, width, height, text, boolval, self._batch)
+        self.buttons[name] = ToggleButton(x, y, width, height, text, boolval, self._batch, visible, interfaced)
 
-    def add_label(self, name, x, y, text='', color=(255, 255, 255)):
-        """
-        Adds a label.
+    def add_int_field(self, name, x, y, w, h, field_name, valobj, visible=True, interfaced=False):
+        self.fields[name] = IntField(x, y, w, h, field_name, valobj, self._batch, self, visible, interfaced)
 
-        :type name: str
-        :param name: the label's name
-        :type x: float
-        :param x: x coord
-        :type y: float
-        :param y: y coord
-        :type text: str
-        :param text: label text
-        :type color: list(int * 3)
-        :param color: color
-        """
-        self.labels[name] = Label(x, y, text, self._batch, color=color)
+    def add_float_field(self, name, x, y, w, h, field_name, valobj, visible=True, interfaced=False):
+        self.fields[name] = FloatField(x, y, w, h, field_name, valobj, self._batch, self, visible, interfaced)
 
-    def add_int_field(self, name, x, y, w, h, field_name, valobj):
-        self.fields[name] = IntField(x, y, w, h, field_name, valobj, self._batch)
+    def add_complex_field(self, name, x, y, w, h, field_name, valobj, visible=True, interfaced=False):
+        self.fields[name] = ComplexField(x, y, w, h, field_name, valobj, self._batch, self, visible, interfaced)
 
-    def add_float_field(self, name, x, y, w, h, field_name, valobj):
-        self.fields[name] = FloatField(x, y, w, h, field_name, valobj, self._batch)
+    def add_int_hslider(self, name, x, y, w, h, field_name, valobj, low=None, high=None, visible=True, interfaced=False):
+        self.sliders[name] = IntHSlider(x, y, w, h, field_name, valobj, self._batch, self, low, high, visible, interfaced)
 
-    def add_complex_field(self, name, x, y, w, h, field_name, valobj):
-        self.fields[name] = ComplexField(x, y, w, h, field_name, valobj, self._batch)
+    def add_int_vslider(self, name, x, y, w, h, valobj, low, high, visible=True, interfaced=False):
+        self.sliders[name] = IntVSlider(x, y, w, h, valobj, self._batch, self, low, high, visible, interfaced)
 
-    def add_int_slider(self, name, x, y, w, h, offs, field_name, valobj, low, high):
-        self.sliders[name] = IntSlider(x, y, w, h, offs, field_name, valobj, low, high, self._batch)
+    def add_label_row(self, name, x, y, w, h, maxchars, maxrows, rowfunc, visible=True, interfaced=False):
+        self.labelrows[name] = LabelRow(name, x, y, w, h, maxchars, maxrows, rowfunc,
+                                        self._batch, self, visible, interfaced)
     # endregion
 
     # region get gui components
@@ -202,7 +212,7 @@ class Window(_win.Window):
     # endregion
 
     # region valset functions
-    def add_int_value(self, name, value, limit='', inclusive='ul', low=0, high=1):
+    def add_int_value(self, name, value=0, limit='', inclusive='ul', low=0, high=1):
         """
         Adds an int value to the window's value set.
         Limit and inclusive should contain a 'u' for upper and 'l' for lower limit/inclusive comparison.
@@ -222,7 +232,7 @@ class Window(_win.Window):
         """
         self.valset.add_int_value(name, value, limit, inclusive, low, high)
 
-    def add_float_value(self, name, value, limit='', inclusive='ul', low=0, high=1):
+    def add_float_value(self, name, value=0, limit='', inclusive='ul', low=0, high=1):
         """
         Adds a float value to the window's value set.
         Limit and inclusive should contain a 'u' for upper and 'l' for lower limit/inclusive comparison.
@@ -242,7 +252,7 @@ class Window(_win.Window):
         """
         self.valset.add_float_value(name, value, limit, inclusive, low, high)
 
-    def add_complex_value(self, name, value, limit='', inclusive='ul', low=0, high=1):
+    def add_complex_value(self, name, value=0, limit='', inclusive='ul', low=0, high=1):
         """
         Adds a complex value to the window's value set.
         Limit and inclusive should contain a 'u' for upper and 'l' for lower limit/inclusive comparison.
@@ -273,6 +283,17 @@ class Window(_win.Window):
         :param value: the initial value
         """
         self.valset.add_bool_value(name, value)
+
+    def add_color_value(self, name, value='#000000'):
+        """
+        Adds a color value to the window's value set.
+
+        :type name: str
+        :param name: the value's name
+        :type value: tuple(int * 3), str
+        :param value: the initial value
+        """
+        self.valset.add_color_value(name, value)
 
     def get_val(self, name):
         """
@@ -334,13 +355,25 @@ class Window(_win.Window):
         for screen in self.screens.values():
             if screen.visible:
                 screen.render()
+
+        # gui components
         for button in self.buttons.values():
-            if button.visible:
+            if button.visible and not button.interfaced:
                 button.render()
         for field in self.fields.values():
-            field.render()
+            if field.visible and not field.interfaced:
+                field.render()
         for slider in self.sliders.values():
-            slider.render()
+            if slider.visible and not slider.interfaced:
+                slider.render()
+
+        # gui interfaces
+        for labelrow in self.labelrows.values():
+            if labelrow.visible:
+                labelrow.render()
+        for colorpicker in self.colorpickers.values():
+            if colorpicker.visible:
+                colorpicker.render()
 
     # overriding base methods
     def on_draw(self):
@@ -353,50 +386,53 @@ class Window(_win.Window):
         self.render()
 
     def on_mouse_motion(self, x, y, dx, dy):
+        self._base_mouse_move(x, y, dx, dy)
         self.mouse_move(x, y, dx, dy)
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        self._base_mouse_drag(x, y, dx, dy, buttons, modifiers)
         self.mouse_drag(x, y, dx, dy, buttons, modifiers)
 
     def on_mouse_press(self, x, y, buttons, modifiers):
-        self.mouse_down(x, y, buttons, modifiers)
+        if not self.mousedown:
+            self.mousedown = True
+            self._base_mouse_down(x, y, buttons, modifiers)
+            self.mouse_down(x, y, buttons, modifiers)
 
     def on_mouse_release(self, x, y, buttons, modifiers):
-        self.mouse_up(x, y, buttons, modifiers)
+        if self.mousedown:
+            self.mousedown = False
+            self._base_mouse_up(x, y, buttons, modifiers)
+            self.mouse_up(x, y, buttons, modifiers)
 
     def on_key_press(self, symbol, modifiers):
+        self._base_key_down(symbol, modifiers)
         self.key_down(symbol, modifiers)
 
     def on_key_release(self, symbol, modifiers):
+        self._base_key_up(symbol, modifiers)
         self.key_up(symbol, modifiers)
 
     def on_text(self, text):
         self.text_input(text)
 
-    # for subclasses
-    def mouse_move(self, x, y, dx, dy):
-        """
-        Called when the mouse moves.
-        Should be called if overridden.
-        Refer to pyglet for documentation.
-        """
+    def _base_mouse_move(self, x, y, dx, dy):
         for screen in self.screens.values():
             if screen.active:
                 screen.mouse_move(x - screen.x, y - screen.y, dx, dy)
-                break
-        if not self.hover and not self.focus and not self.mouse:
+        if not self.hover and not self.focus and not self.mousedown:
             for button in self.buttons.values():
-                if button.is_inside(x, y):
+                if button.visible and button.is_inside(x, y):
                     self.hover = button
                     button.hover_on()
                     return
             for field in self.fields.values():
-                if field.is_inside(x, y):
+                if field.visible and field.is_inside(x, y):
                     self.hover = field
                     field.hover_on()
                     return
             for slider in self.sliders.values():
-                if slider.is_inside(x, y):
+                if slider.visible and slider.is_inside(x, y):
                     self.hover = slider
                     slider.hover_on()
                     return
@@ -405,12 +441,7 @@ class Window(_win.Window):
                 self.hover.hover_off()
                 self.hover = None
 
-    def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
-        """
-        Called when the mouse is dragged.
-        Should be called if overridden.
-        Refer to pyglet for documentation.
-        """
+    def _base_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         if self.hover:
             self.hover.hover_off()
             self.hover = None
@@ -419,16 +450,9 @@ class Window(_win.Window):
                 screen.mouse_drag(x - screen.x, y - screen.y, dx, dy, buttons, modifiers)
         if self.focus:
             self.focus.mouse_drag(x - self.focus.x, y - self.focus.y, dx, dy, buttons, modifiers)
-            if isinstance(self.focus, Slider):
-                self.render()
 
-    def mouse_down(self, x, y, buttons, modifiers):
-        """
-        Called when the a mouse button is pressed.
-        Should be called if overridden.
-        Refer to pyglet for documentation.
-        """
-        self.mouse = True
+    def _base_mouse_down(self, x, y, buttons, modifiers):
+        # print('down')
         if self.hover:
             self.hover.hover_off()
             self.hover = None
@@ -437,59 +461,55 @@ class Window(_win.Window):
                 screen.mouse_down(x - screen.x, y - screen.y, buttons, modifiers)
                 return
         if self.focus:
+            # print('down with focus')
             if self.focus.is_inside(x, y):
-                self.focus.mouse_down(x, y, buttons, modifiers)
+                self.focus.mouse_down(x - self.focus.x, y - self.focus.y, buttons, modifiers)
             else:
                 self.focus.focus_off()
                 self.focus = None
         else:
             for button in self.buttons.values():
-                if button.is_inside(x, y):
+                if button.visible and button.is_inside(x, y):
                     self.focus = button
                     self.focus.focus_on()
                     return
             for field in self.fields.values():
-                if field.is_inside(x, y):
+                if field.visible and field.is_inside(x, y):
                     self.focus = field
                     self.focus.focus_on()
                     return
             for slider in self.sliders.values():
-                if slider.is_inside(x, y):
+                if slider.visible and slider.is_inside(x, y):
                     self.focus = slider
                     self.focus.focus_on()
                     return
+            for colorpicker in self.colorpickers.values():
+                if colorpicker.visible and colorpicker.is_inside(x, y):
+                    colorpicker.mouse_down(x, y, buttons, modifiers)
+                    return
 
-    def mouse_up(self, x, y, buttons, modifiers):
-        """
-        Called when a mouse button is released.
-        Should be called if overridden.
-        Refer to pyglet for documentation.
-        """
-        self.mouse = False
+    def _base_mouse_up(self, x, y, buttons, modifiers):
+        # print('up')
         if self.hover:
             self.hover.hover_off()
             self.hover = None
         if self.focus:
-            if isinstance(self.focus, Slider):
+            # print('up with focus')
+            if isinstance(self.focus, (Slider, VSlider)):
                 self.focus.focus_off()
                 self.focus = None
             elif isinstance(self.focus, Button):
                 self.focus.focus_off()
-                if self.focus.is_inside(x, y):  # and self.focus.active:
-                    self.focus.mouse_up()
+                if self.focus.is_inside(x, y):
+                    self.focus.mouse_up(x - self.focus.x, y - self.focus.y, buttons, modifiers)
                 self.focus = None
-            return
-        for screen in self.screens.values():
-            if screen.active and screen.is_inside(x, y):
-                screen.mouse_up(x - screen.x, y - screen.y, buttons, modifiers)
-                return
+        else:
+            for screen in self.screens.values():
+                if screen.active and screen.is_inside(x, y):
+                    screen.mouse_up(x - screen.x, y - screen.y, buttons, modifiers)
+                    return
 
-    def key_down(self, symbol, modifiers):
-        """
-        Called when a key is pressed.
-        Should be called if overridden.
-        Refer to pyglet for documentation.
-        """
+    def _base_key_down(self, symbol, modifiers):
         if self.focus:
             self.focus.key_down(symbol, modifiers)
             if symbol == _win.key.ENTER:
@@ -500,21 +520,29 @@ class Window(_win.Window):
                 if screen.active:
                     screen.key_down(symbol, modifiers)
 
-    def key_up(self, symbol, modifiers):
-        """
-        Called when a key is released.
-        Should be called if overridden.
-        Refer to pyglet for documentation.
-        """
+    def _base_key_up(self, symbol, modifiers):
         for screen in self.screens.values():
             if screen.active:
                 screen.key_up(symbol, modifiers)
 
+    def mouse_move(self, x, y, dx, dy):
+        pass
+
+    def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        pass
+
+    def mouse_down(self, x, y, buttons, modifiers):
+        pass
+
+    def mouse_up(self, x, y, buttons, modifiers):
+        pass
+
+    def key_down(self, symbol, modifiers):
+        pass
+
+    def key_up(self, symbol, modifiers):
+        pass
+
     def text_input(self, text):
-        """
-        Called when text is entered.
-        Should be called if overridden.
-        Refer to pyglet for documentation.
-        """
         if self.focus:
             self.focus.text_input(text)

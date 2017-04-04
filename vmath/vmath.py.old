@@ -1,31 +1,36 @@
 from numbers import Number
 from math import cos, sin, pi
+import numpy as np
 
 
 __all__ = ['Vector', 'Matrix']
 
 
 class Vector:
+    @property
+    def h(self):
+        return self.data[:-1]
+
     def __init__(self, *args):
         """
         Vector constructor.
 
         >>> a = Vector(1, 2, 3)
-        >>> b = Vector(1+2j, 4-6j)
+        >>> b = Vector(1.5, 2.7)
         >>> print(a)
-        (1, 2, 3)
+        [ 1.  2.  3.]
         >>> print(b)
-        (1.00+2.00j, 4.00-6.00j)
+        [ 1.5  2.7]
 
         :param args: a list of numbers
         """
         if not args:
             raise TypeError('Must supply arguments!')
-        for x in args:
-            if not isinstance(x, Number):
-                raise TypeError('All arguments must be numbers!')
-        self._data = list(args)
-        self.dim = len(args)
+        if isinstance(args[0], np.ndarray):
+            self.data = args[0]
+        else:
+            self.data = np.array(args, dtype=np.float64)
+        self.dim = len(self.data)
 
     def __add__(self, other):
         """
@@ -36,17 +41,17 @@ class Vector:
         >>> b = Vector(2, 4)
         >>> c = 5
         >>> print(a + b)
-        (3, 6)
+        [ 3.  6.]
         >>> print(a + c)
-        (6, 7)
+        [ 6.  7.]
         """
 
         if isinstance(other, Vector):
             if self.dim is not other.dim:
                 raise ArithmeticError('Vectors must be same dimension!')
-            return Vector(*[self[i] + other[i] for i in range(len(self))])
+            return Vector(self.data + other.data)
         elif isinstance(other, Number):
-            return Vector(*[self[i] + other for i in self])
+            return Vector(self.data + other)
         else:
             raise TypeError('Must add by a number or a vector!')
 
@@ -59,16 +64,16 @@ class Vector:
         >>> b = Vector(2, 4)
         >>> c = 5
         >>> print(a - b)
-        (-1, -2)
+        [-1. -2.]
         >>> print(a - c)
-        (-4, -3)
+        [-4. -3.]
         """
         if isinstance(other, Vector):
             if self.dim is not other.dim:
                 raise ArithmeticError('Vectors must be same dimension!')
-            return Vector(*[self[i] - other[i] for i in range(len(self))])
+            return Vector(self.data - other.data)
         elif isinstance(other, Number):
-            return Vector(*[self[i] + other for i in self])
+            return Vector(self.data - other)
         else:
             raise TypeError('Must subtract by a number or a vector!')
 
@@ -81,16 +86,16 @@ class Vector:
         >>> b = Vector(2, 4)
         >>> c = 3
         >>> print(a * b)
-        10
+        10.0
         >>> print(a * c)
-        (3, 6)
+        [ 3.  6.]
         """
         if isinstance(other, Vector):
             if self.dim is not other.dim:
                 raise ArithmeticError('Vectors must be same dimension!')
-            return sum([self[i] * other[i] for i in range(len(self))])
+            return np.dot(self.data, other.data)
         elif isinstance(other, Number):
-            return Vector(*[x * other for x in self])
+            return Vector(self.data * other)
         else:
             raise TypeError('Must multiply by a number or a vector!')
 
@@ -103,15 +108,12 @@ class Vector:
         >>> a = Vector(1, 2, 3)
         >>> b = Vector(2, 4, -5)
         >>> print(a @ b)
-        (-22, 11, 0)
+        [-22.  11.   0.]
         """
         if isinstance(other, Vector):
             if self.dim != 3 or other.dim != 3:
                 raise ArithmeticError('Vectors must have dimension 3!')
-        x1 = self[1] * other[2] - self[2] * other[1]
-        x2 = -(self[0] * other[2] - self[2] * other[0])
-        x3 = self[0] * other[1] - self[1] * other[0]
-        return Vector(x1, x2, x3)
+        return Vector(np.cross(self.data, other.data))
 
     def __rmul__(self, other):
         if not isinstance(other, Matrix):
@@ -128,10 +130,10 @@ class Vector:
         >>> a = Vector(3, 8)
         >>> c = 5
         >>> print(a // c)
-        (0, 1)
+        [ 0.  1.]
         """
         if isinstance(other, Number):
-            return Vector(*[x // other for x in self])
+            return Vector(self.data // other)
         else:
             raise TypeError('Must divide by a number!')
 
@@ -143,10 +145,10 @@ class Vector:
         >>> a = Vector(3, 8)
         >>> c = 5
         >>> print(a / c)
-        (0.60, 1.60)
+        [ 0.6  1.6]
         """
         if isinstance(other, Number):
-            return Vector(*[x / other for x in self])
+            return Vector(self.data / other)
         else:
             raise TypeError('Must divide by a number!')
 
@@ -156,21 +158,18 @@ class Vector:
 
         >>> a = Vector(1, 2)
         >>> print(-a)
-        (-1, -2)
+        [-1. -2.]
         """
-        args = []
-        for x in self._data:
-            args.append(-x)
-        return Vector(*args)
+        return Vector(-self.data)
 
     def __invert__(self):
         """
         Normalization.
         Divides the vector by its magnitude.
 
-        >>> a = Vector(1, 2)
+        >>> a = Vector(2, 3)
         >>> print(~a)
-        (0.45, 0.89)
+        [ 0.5547002   0.83205029]
         >>> print(abs(~a))
         1.0
         """
@@ -185,8 +184,7 @@ class Vector:
         >>> print(abs(a))
         5.0
         """
-        mag2 = sum([x ** 2 for x in self])
-        return mag2 ** .5
+        return np.linalg.norm(self.data)
 
     def __bool__(self):
         """
@@ -199,10 +197,7 @@ class Vector:
         >>> True if b else False
         False
         """
-        for x in self._data:
-            if x:
-                return True
-        return False
+        return bool(self.data.any())
 
     def __lt__(self, other):
         """
@@ -241,10 +236,7 @@ class Vector:
         """
         if self.dim is not other.dim:
             raise ArithmeticError('Vectors must be same dimension!')
-        for i in range(self.dim):
-            if self[i] != other[i]:
-                return False
-        return True
+        return bool((self.data == other.data).all())
 
     def __ne__(self, other):
         """
@@ -255,12 +247,7 @@ class Vector:
         >>> a != b
         True
         """
-        if self.dim is not other.dim:
-            raise ArithmeticError('Vectors must be same dimension!')
-        for i in range(self.dim):
-            if self[i] != other[i]:
-                return True
-        return False
+        return bool((self.data != other.data).all())
 
     def __ge__(self, other):
         """
@@ -294,12 +281,10 @@ class Vector:
 
         >>> a = Vector(1, 2, 3)
         >>> a[0]
-        1
-        >>> a[:2]
-        [1, 2]
+        1.0
         """
         if isinstance(item, (int, slice)):
-            return self._data[item]
+            return self.data[item]
         else:
             raise TypeError('Item must be an integer or slice!')
 
@@ -310,7 +295,7 @@ class Vector:
         >>> a = Vector(1, 2)
         >>> a[0] = 3
         >>> print(a)
-        (3, 2)
+        [ 3.  2.]
         """
         if not isinstance(key, int):
             raise KeyError('Key must be an integer!')
@@ -318,7 +303,7 @@ class Vector:
             raise IndexError
         if not isinstance(value, Number):
             raise ArithmeticError('Value must be a number!')
-        self._data[key] = value
+        self.data[key] = value
 
     def __len__(self):
         """
@@ -343,8 +328,9 @@ class Vector:
             raise StopIteration
 
     def __str__(self):
-        form = '(' + ', '.join(['{:d}' if isinstance(self[i], int) else '{:.2f}' for i in range(len(self))]) + ')'
-        return form.format(*self._data)
+        #form = '(' + ', '.join(['{:d}' if isinstance(self[i], int) else '{:.2f}' for i in range(len(self))]) + ')'
+        #return form.format(*self.data)
+        return str(self.data)
 
     def __repr__(self):
         return 'Vector' + str(self)
@@ -372,10 +358,10 @@ class Vector:
         st = sin(theta)
         ct = cos(theta)
         if trans:
-            self.__sub__(trans)
+            self.data = [*(self - trans)]
         self[0], self[1] = [*(Matrix([ct, -st], [st, ct]) * self)]
         if trans:
-            self.__add__(trans)
+            self.data = [*(self + trans)]
 
         return self
 
@@ -422,50 +408,41 @@ class Matrix:
     def __init__(self, *args):
         if not args:
             raise TypeError('Must supply arguments!')
-        for row in args:
-            if not isinstance(row, (list, tuple, Vector)):
-                raise TypeError('All arguments must be lists, tuples, or vectors!')
-            for x in row:
-                if not isinstance(x, Number):
-                    raise TypeError('All elements in arguments must be numbers!')
-        for i in range(1, len(args)):
-            if len(args[i - 1]) != len(args[i]):
-                raise IndexError('All arguments must have the same length!')
-
-        data = [list(row) for row in args]
-        self._data = data
-        self.dim = (len(data), len(data[0]))
+        if isinstance(args[0], np.ndarray):
+            self.data = args[0]
+        else:
+            """
+            for row in args:
+                if not isinstance(row, (list, tuple, Vector)):
+                    raise TypeError('All arguments must be lists, tuples, or vectors!')
+                for x in row:
+                    if not isinstance(x, Number):
+                        raise TypeError('All elements in arguments must be numbers!')
+            for i in range(1, len(args)):
+                if len(args[i - 1]) != len(args[i]):
+                    raise IndexError('All arguments must have the same length!')
+            """
+            self.data = np.array(args, dtype=np.float64)
+        self.dim = (len(self.data), len(self.data[0]))
 
     def __mul__(self, other):
         if isinstance(other, Vector):
             return NotImplemented
-        if not isinstance(other, (Number, Matrix)):
-            raise TypeError('Must multiply by a number or matrix!')
-        if isinstance(other, Number):
-            return Matrix(*[[self[x, y] * other for y in range(self.dim[1])] for x in range(self.dim[0])])
+        if isinstance(other, Matrix):
+            return Matrix(self.data @ other.data)
+        else:
+            #return Matrix(*[[self[x, y] * other for y in range(self.dim[1])] for x in range(self.dim[0])])
+            return Matrix(self.data * other)
 
     def __getitem__(self, item):
         """
         :type item: int, list(int * 2), tuple(int * 2)
         :rtype: list(Number * dim[1]), int
         """
-        if isinstance(item, int):
-            return self._data[item]
-        elif isinstance(item, (list, tuple)) and len(item) == 2 and isinstance(item[0], int) and isinstance(item[1], int):
-            return self._data[item[0]][item[1]]
-        else:
-            raise IndexError('Index must be an int or a tuple of 2 ints!')
+        return self.data[item]
 
     def __setitem__(self, key, value):
-        if not isinstance(key, (list, tuple)):
-            raise KeyError('Key must be a list or tuple!')
-        if len(key) != 2:
-            raise KeyError('Key must have length 2!')
-        if key[0] < 0 or key[0] >= self.dim[0] or key[1] < 0 or key[1] >= self.dim[1]:
-            raise IndexError
-        if not isinstance(value, Number):
-            raise ArithmeticError('Value must be a number!')
-        self._data[key[0]][key[1]] = value
+        self.data[key] = value
 
     def __len__(self):
         """
@@ -484,6 +461,14 @@ class Matrix:
             return result
         else:
             raise StopIteration
+
+    def __str__(self):
+        #form = '\n'.join(['[' + ','.join(['{:.2f}'] * self.dim[1]) + ']'] * self.dim[0])
+        #return form.format(*[v for row in self.data for v in row])
+        return str(self.data)
+
+    def __repr__(self):
+        return 'Matrix\n' + str(self)
 
     def __setattr__(self, key, value):
         if 'dim' in self.__dict__ and key is 'dim':
