@@ -24,7 +24,7 @@ class Screen:
 
     _vertex_types = ('points', 'lines', 'line_strip', 'triangles', 'quads')
 
-    def __init__(self, x, y, width, height, valset, bg=(255, 255, 255), visible=True, active=True):
+    def __init__(self, parent, x, y, width, height, bg=(255, 255, 255), visible=True, active=True):
         """
         Screen constructor.
 
@@ -46,30 +46,27 @@ class Screen:
         :param active: determines if the screen is updated
         """
 
+        self.parent = parent
+        self.valset = parent.valset
         self.x = x
         self.y = y
         self.w = width
         self.h = height
-        # window width and height for glOrtho
-        self._ww = 0
-        self._wh = 0
         self.visible = visible
         self.active = active
 
         self._batch = _graphics.Batch()
         self._vertex_lists = {}
-        self._vertexes = {}
+        self._vertices = {}
         self._colors = {}
         self._vertex_lists['bg'] = None
         for vtype in self._vertex_types:
             self._vertex_lists[vtype] = None
-            self._vertexes[vtype] = []
+            self._vertices[vtype] = []
             self._colors[vtype] = []
 
         self.bg = bg
         self.set_bg(bg)
-
-        self.valset = valset
 
     # region visible and active set functions
     def set_visible(self, visible):
@@ -160,7 +157,7 @@ class Screen:
         :type colors: list(float)
         :param colors: flattened list of rgb colors
         """
-        self._vertexes['points'] = vertexes
+        self._vertices['points'] = vertexes
         self._colors['points'] = colors
 
     def set_lines(self, vertexes, colors):
@@ -174,11 +171,11 @@ class Screen:
         :type colors: list(float)
         :param colors: flattened list of rgb colors
         """
-        self._vertexes['lines'] = vertexes
+        self._vertices['lines'] = vertexes
         self._colors['lines'] = colors
 
     def set_line_strip(self, vertexes, colors):
-        self._vertexes['line_strip'] = vertexes
+        self._vertices['line_strip'] = vertexes
         self._colors['line_strip'] = colors
 
     def set_triangles(self, vertexes, colors):
@@ -192,7 +189,7 @@ class Screen:
         :type colors: list(float)
         :param colors: flattened list of rgb colors
         """
-        self._vertexes['triangles'] = vertexes
+        self._vertices['triangles'] = vertexes
         self._colors['triangles'] = colors
 
     def set_quads(self, vertexes, colors):
@@ -206,7 +203,7 @@ class Screen:
         :type colors: list(float)
         :param colors: flattened list of rgb colors
         """
-        self._vertexes['quads'] = vertexes
+        self._vertices['quads'] = vertexes
         self._colors['quads'] = colors
     # endregion
 
@@ -260,22 +257,23 @@ class Screen:
                 continue
 
             if vtype == 'points':
-                vlist = self._batch.add(len(self._vertexes[vtype]) // 3, GL_POINTS, None,
-                                        ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+                vlist = self._batch.add(len(self._vertices[vtype]) // 3, GL_POINTS, None,
+                                        ('v3f', self._vertices[vtype]), ('c3B', self._colors[vtype]))
             elif vtype == 'lines':
-                vlist = self._batch.add(len(self._vertexes[vtype]) // 3, GL_LINES, None,
-                                        ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+                vlist = self._batch.add(len(self._vertices[vtype]) // 3, GL_LINES, None,
+                                        ('v3f', self._vertices[vtype]), ('c3B', self._colors[vtype]))
             elif vtype == 'line_strip':
-                vlist = self._batch.add(len(self._vertexes[vtype]) // 3, GL_LINE_STRIP, None,
-                                        ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+                vlist = self._batch.add(len(self._vertices[vtype]) // 3, GL_LINE_STRIP, None,
+                                        ('v3f', self._vertices[vtype]), ('c3B', self._colors[vtype]))
             elif vtype == 'triangles':
-                vlist = self._batch.add(len(self._vertexes[vtype]) // 3, GL_TRIANGLES, None,
-                                        ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+                vlist = self._batch.add(len(self._vertices[vtype]) // 3, GL_TRIANGLES, None,
+                                        ('v3f', self._vertices[vtype]), ('c3B', self._colors[vtype]))
             elif vtype == 'quads':
-                vlist = self._batch.add(len(self._vertexes[vtype]) // 3, GL_QUADS, None,
-                                        ('v3f', self._vertexes[vtype]), ('c3B', self._colors[vtype]))
+                vlist = self._batch.add(len(self._vertices[vtype]) // 3, GL_QUADS, None,
+                                        ('v3f', self._vertices[vtype]), ('c3B', self._colors[vtype]))
             else:
                 vlist = None
+
             self._vertex_lists[vtype] = vlist
 
         self._clear()
@@ -285,9 +283,9 @@ class Screen:
         Clears the buffer arrays.
         """
         for vtype in self._vertex_types:
-            del self._vertexes[vtype]
+            del self._vertices[vtype]
             del self._colors[vtype]
-            self._vertexes[vtype] = []
+            self._vertices[vtype] = []
             self._colors[vtype] = []
 
     def mouse_move(self, x, y, dx, dy):
@@ -338,7 +336,7 @@ class Screen:
         """
         pass
 
-    def tick(self):
+    def tick(self, dt):
         """
         Called by the window's tick function.
         Can be overridden.
@@ -370,8 +368,6 @@ class Screen:
         return 0 <= x - self.x < self.w and 0 <= y - self.y < self.h
 
     def on_resize(self, width, height):
-        self._ww = width
-        self._wh = height
         self.resize(width, height)
         self.set_bg(self.bg)
 
@@ -419,14 +415,17 @@ class Screen2D(Screen):
         """
         Draws the batch in glOrtho perspective.
         """
+        xr = self.parent.real_width / self.parent.width
+        yr = self.parent.real_height / self.parent.height
+
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        glOrtho(0, self._ww, 0, self._wh, -1001, 1001)
+        glOrtho(0, self.parent.width, 0, self.parent.height, -101, 101)
         glMatrixMode(GL_MODELVIEW)
 
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_SCISSOR_TEST)
-        glScissor(self.x, self.y, self.w, self.h)
+        glScissor(int(self.x * xr), int(self.y * yr), int(self.w * xr), int(self.h * yr))
 
         glPushMatrix()
         glTranslatef(self.x + .1, self.y + .1, 0)
@@ -448,8 +447,8 @@ class Screen2D(Screen):
         if self._vertex_lists['bg']:
             self._vertex_lists['bg'].delete()
         vlist = self._batch.add(4, GL_QUADS, None,
-                                ('v3f', (0, 0, -1000, self.w, 0, -1000,
-                                         self.w, self.h, -1000, 0, self.h, -1000)),
+                                ('v3f', (0, 0, -100, self.w, 0, -100,
+                                         self.w, self.h, -100, 0, self.h, -100)),
                                 ('c3B', bg * 4))
         self.bg = bg
         self._vertex_lists['bg'] = vlist
@@ -467,7 +466,7 @@ class Screen2D(Screen):
         :type color: list(int * 3)
         :param color: color
         """
-        self._vertexes['points'].extend((x, y, z))
+        self._vertices['points'].extend((x, y, z))
         self._colors['points'].extend(color)
 
     def add_points(self, points, colors):
@@ -482,7 +481,7 @@ class Screen2D(Screen):
         """
         if len(points) != len(colors):
             raise IndexError('Points and colors must have same length!')
-        self._vertexes['points'].extend(points)
+        self._vertices['points'].extend(points)
         self._colors['points'].extend(colors)
 
     def add_line(self, x1, y1, x2, y2, z=0, color=(0, 0, 0)):
@@ -502,7 +501,7 @@ class Screen2D(Screen):
         :type color: list(int * 3)
         :param color: color
         """
-        self._vertexes['lines'].extend((x1, y1, z, x2, y2, z))
+        self._vertices['lines'].extend((x1, y1, z, x2, y2, z))
         self._colors['lines'].extend(color * 2)
 
     def add_triangle(self, x1, y1, x2, y2, x3, y3, z=0, color=(0, 0, 0), uniform=True, colors=None):
@@ -532,7 +531,7 @@ class Screen2D(Screen):
         :type colors: list(int * 9)
         :param colors: non-uniform coloring
         """
-        self._vertexes['triangles'].extend((x1, y1, z, x2, y2, z, x3, y3, z))
+        self._vertices['triangles'].extend((x1, y1, z, x2, y2, z, x3, y3, z))
         if uniform:
             self._colors['triangles'].extend(color * 3)
         else:
@@ -569,7 +568,7 @@ class Screen2D(Screen):
         :type colors: list(int * 12)
         :param colors: non-uniform coloring
         """
-        self._vertexes['quads'].extend((x1, y1, z, x2, y2, z, x3, y3, z, x4, y4, z))
+        self._vertices['quads'].extend((x1, y1, z, x2, y2, z, x3, y3, z, x4, y4, z))
         if uniform:
             self._colors['quads'].extend(color * 4)
         else:
@@ -598,7 +597,7 @@ class GraphScreen(Screen2D):
     :var max_gy: graph's maximum gy drawn
     """
 
-    def __init__(self, x, y, width, height, gx, gy, gw, gh, valset, zoom_valobj, bg=(255, 255, 255), visible=True, active=True):
+    def __init__(self, parent, x, y, width, height, gx, gy, gw, gh, zoom_val_name, bg=(255, 255, 255), visible=True, active=True):
         """
         GraphScreen constructor.
 
@@ -620,8 +619,8 @@ class GraphScreen(Screen2D):
         :param gh: graph height
         :type valset: ValSet
         :param valset: the window's value set
-        :type zoom_valobj: FloatValue
-        :param zoom_valobj: the zoom ratio value object
+        :type zoom_val_name: str
+        :param zoom_val_name: the zoom ratio value's name
         :type bg: list(int * 3)
         :param bg: background color
         :type visible: bool
@@ -632,12 +631,12 @@ class GraphScreen(Screen2D):
         self.set_graph_coords(gx, gy, gw, gh)
         self._set_graph_minmax()
         self.reset_to(gx, gy, gw, gh)
-        super().__init__(x, y, width, height, valset, bg, visible, active)
+        super().__init__(parent, x, y, width, height, bg, visible, active)
         # original width / height
         self._ow = width
         self._oh = height
 
-        self.zoom_valobj = zoom_valobj
+        self.zoom_valobj = self.get_valobj(zoom_val_name)
         self.total_zoom = 1
         self.drag = False
         # offset for drag
@@ -764,8 +763,8 @@ class GraphScreen(Screen2D):
         if self._vertex_lists['bg']:
             self._vertex_lists['bg'].delete()
         vlist = self._batch.add(4, GL_QUADS, None,
-                                ('v3f', (self.min_gx, self.min_gy, -500, self.max_gx, self.min_gy, -500,
-                                         self.max_gx, self.max_gy, -500, self.min_gx, self.max_gy, -500)),
+                                ('v3f', (self.min_gx, self.min_gy, -100, self.max_gx, self.min_gy, -100,
+                                         self.max_gx, self.max_gy, -100, self.min_gx, self.max_gy, -100)),
                                 ('c3B', bg * 4))
         self.bg = bg
         self._vertex_lists['bg'] = vlist
@@ -774,19 +773,21 @@ class GraphScreen(Screen2D):
         """
         Draws the batch in glOrtho perspective with zoom.
         """
+        xr = self.parent.real_width / self.parent.width
+        yr = self.parent.real_height / self.parent.height
+
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        glOrtho(0, self._ww, 0, self._wh, -1001, 1001)
+        glOrtho(0, self.parent.width, 0, self.parent.height, -101, 101)
         glMatrixMode(GL_MODELVIEW)
 
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_SCISSOR_TEST)
-        glScissor(self.x, self.y, self.w, self.h)
+        glScissor(int(self.x * xr), int(self.y * yr), int(self.w * xr), int(self.h * yr))
 
         glPushMatrix()
-        #glTranslatef(self.x + .1, self.y + .1, 0)
 
-        glTranslatef(self.x + self.w / 2 - self.gx * self.w / self.gw, self.y + self.h / 2 - self.gy * self.h / self.gh, 0)
+        glTranslatef(self.x + self.w / 2 - self.gx * self.w / self.gw + .1, self.y + self.h / 2 - self.gy * self.h / self.gh + .1, 0)
         glScalef(self.w / self.gw, self.h / self.gh, 1)
 
         self._batch.draw()
@@ -925,7 +926,7 @@ class Screen3D(Screen):
     :var active: if the screen is updated
     """
 
-    def __init__(self, x, y, width, height, camera, rotation, offset, valset, bg=(0, 0, 0), visible=True, active=True):
+    def __init__(self, parent, x, y, width, height, camera, rotation, offset, bg=(0, 0, 0), visible=True, active=True):
         """
         Screen3D constructor.
 
@@ -942,9 +943,7 @@ class Screen3D(Screen):
         :type rotation: Vector(3d)
         :param rotation: rotation vector
         :type offset: Vector(3d)
-        :param offset: offset vector
-        :type valset: ValSet
-        :param valset: the window's value set
+        :param offset: offset vector=
         :type bg: list(int * 3)
         :param bg: background color
         :type visible: bool
@@ -956,7 +955,7 @@ class Screen3D(Screen):
         self.camera = camera
         self.rotation = rotation
         self.offset = offset
-        super().__init__(x, y, width, height, valset, bg, visible, active)
+        super().__init__(parent, x, y, width, height, bg, visible, active)
 
     def set_bg(self, bg):
         """
@@ -988,6 +987,8 @@ class Screen3D(Screen):
         Rotation rotates about original center.
         BC push has backwards order?
         """
+        xr = self.parent.real_width / self.parent.width
+        yr = self.parent.real_height / self.parent.height
 
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
@@ -998,7 +999,7 @@ class Screen3D(Screen):
 
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_SCISSOR_TEST)
-        glScissor(int(self.x), int(self.y), int(self.x + self.w), int(self.y + self.h))
+        glScissor(int(self.x * xr), int(self.y * yr), int(self.w * xr), int(self.h * yr))
 
         glPushMatrix()
 
@@ -1041,7 +1042,7 @@ class Screen3D(Screen):
         :type color: list(int * 3)
         :param color: color
         """
-        self._vertexes['points'].extend((x, y, z))
+        self._vertices['points'].extend((x, y, z))
         self._colors['points'].extend(color)
 
     def add_points(self, points, colors):
@@ -1054,7 +1055,7 @@ class Screen3D(Screen):
         :type colors: list(int)
         :param colors: flattened list of rgb colors
         """
-        self._vertexes['points'].extend(points)
+        self._vertices['points'].extend(points)
         self._colors['points'].extend(colors)
 
     def add_line(self, x1, y1, z1, x2, y2, z2, color=(255, 255, 255)):
@@ -1076,11 +1077,11 @@ class Screen3D(Screen):
         :type color: list(int * 3)
         :param color: color
         """
-        self._vertexes['lines'].extend((x1, y1, z1, x2, y2, z2))
+        self._vertices['lines'].extend((x1, y1, z1, x2, y2, z2))
         self._colors['lines'].extend(color * 2)
 
     def set_line_strip(self, lines, colors):
-        self._vertexes['line_strip'] = lines
+        self._vertices['line_strip'] = lines
         self._colors['line_strip'] = colors
 
     def add_triangle(self, x1, y1, z1, x2, y2, z2, x3, y3, z3, color=(255, 255, 255), uniform=True, colors=None):
@@ -1114,7 +1115,7 @@ class Screen3D(Screen):
         :type colors: list(int * 9)
         :param colors: non-uniform coloring
         """
-        self._vertexes['triangles'].extend((x1, y1, z1, x2, y2, z2, x3, y3, z3))
+        self._vertices['triangles'].extend((x1, y1, z1, x2, y2, z2, x3, y3, z3))
         if uniform:
             self._colors['triangles'].extend(color * 3)
         else:
@@ -1157,7 +1158,7 @@ class Screen3D(Screen):
         :type colors: list(int * 12)
         :param colors: non-uniform coloring
         """
-        self._vertexes['quads'].extend((x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4))
+        self._vertices['quads'].extend((x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4))
         if uniform:
             self._colors['quads'].extend(color * 4)
         else:

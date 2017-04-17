@@ -237,8 +237,8 @@ def get_data(mode, w, h, bl_x, bl_y, tr_x, tr_y, limit, max_iter, c, palette):
 
 
 class MandelScreen(pyg.screen.GraphScreen):
-    def __init__(self, x, y, width, height, valset, zoom_valobj, bg = (255, 255, 255), visible = True):
-        super().__init__(x, y, width, height, 0, 0, 2.5, 5, valset, zoom_valobj, bg=bg, visible=visible)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.palette = np.array([[0, 0, 0], [100, 0, 100], [255, 255, 255], [255, 161, 3]], dtype=np.int32)
 
     def reset_screen(self):
@@ -299,9 +299,9 @@ class MandelScreen(pyg.screen.GraphScreen):
 
 
 class JuliaScreen(pyg.screen.GraphScreen):
-    def __init__(self, x, y, width, height, valset, zoom_valobj, bg=(255, 255, 255), visible=True):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.mode = 1
-        super().__init__(x, y, width, height, 0, 0, 5, 5, valset, zoom_valobj, bg=bg, visible=visible)
         # -.743643887037151, 0.131825904205330, .000000000051299, .000000000051299
         rawdata = np.zeros(self.w * self.h * 3, dtype=np.ubyte).ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte))
         self.img = pyglet.image.ImageData(self.w, self.h, 'RGB', rawdata)
@@ -460,9 +460,9 @@ class JuliaWindow(pyg.window.Window):
         self.valset.add_float_value('saved_gw', 0.0)
         self.valset.add_float_value('saved_gh', 0.0)
 
-        main = JuliaScreen(0, 200, 500, 500, self.valset, self.valset.get_valobj('gz'))
+        main = JuliaScreen(self, 0, 200, 500, 500, 0, 0, 5, 5, 'gz')
         self.add_screen('main', main)
-        mandel = MandelScreen(250, 200, 250, 500, self.valset, self.valset.get_valobj('gz'))
+        mandel = MandelScreen(self, 250, 200, 250, 500, 0, 0, 2.5, 5, 'gz')
         mandel.off()
         self.add_screen('mandel', mandel)
 

@@ -110,7 +110,7 @@ class LogisticScreen(pyg.screen.GraphScreen):
             _, py = self.on_screen(0, y)
             self.fpoints.append((px, py))
 
-    def tick(self):
+    def tick(self, dt):
         """
         Ticks the cobweb if running
         """
@@ -118,6 +118,7 @@ class LogisticScreen(pyg.screen.GraphScreen):
             self.cobwebframe.append(get_next(self.get_val('a'), self.cobwebframe[-1]))
             if len(self.cobwebframe) > self.get_val('cob-tail'):
                 self.cobwebframe.pop(0)
+            print(dt)
             self.render()
 
     def render(self):
@@ -136,7 +137,7 @@ class LogisticScreen(pyg.screen.GraphScreen):
                     if py < 0 or y > self.h:
                         continue
                     self.add_point(px, py)
-            print(str(len(self._vertexes['points']) // 3) + ' points')
+            print(str(len(self._vertices['points']) // 3) + ' points')
         elif self.mode == 1:
             # y = x
             lx1, ly1 = self.on_screen(-10, -10)
@@ -157,32 +158,31 @@ class LogisticScreen(pyg.screen.GraphScreen):
             if not self.runcobweb:
                 orbit = get_orbit(self.get_val('a'), self.get_val('startx'), self.get_val('cob-trans'), self.get_val('cob-iter'))
                 for i in range(len(orbit) - 1):
-                    x1, y1 = self.on_screen(orbit[i], orbit[i])
-                    x2, y2 = self.on_screen(orbit[i], orbit[i + 1])
-                    x3, y3 = self.on_screen(orbit[i + 1], orbit[i + 1])
+                    x1, y1 = orbit[i], orbit[i]
+                    x2, y2 = orbit[i], orbit[i + 1]
+                    x3, y3 = orbit[i + 1], orbit[i + 1]
                     self.add_line(x1, y1, x2, y2)
                     self.add_line(x2, y2, x3, y3)
             else:
                 for i in range(len(self.cobwebframe) - 1):
-                    x1, y1 = self.on_screen(self.cobwebframe[i], self.cobwebframe[i])
-                    x2, y2 = self.on_screen(self.cobwebframe[i], self.cobwebframe[i + 1])
-                    x3, y3 = self.on_screen(self.cobwebframe[i + 1], self.cobwebframe[i + 1])
+                    x1, y1 = self.cobwebframe[i], self.cobwebframe[i]
+                    x2, y2 = self.cobwebframe[i], self.cobwebframe[i + 1]
+                    x3, y3 = self.cobwebframe[i + 1], self.cobwebframe[i + 1]
                     self.add_line(x1, y1, x2, y2, color=(-i * 17 - 1, 0, 0))
                     self.add_line(x2, y2, x3, y3, color=(-i * 17 - 1, 0, 0))
         elif self.mode == 2:
             # y = 0
-            lx1, ly1 = self.on_screen(0, 0)
-            lx2, ly2 = self.on_screen(10000, 0)
+            lx1, ly1 = 0, 0
+            lx2, ly2 = 10000, 0
             self.add_line(lx1, ly1, lx2, ly2, color=(0, 0, 255))
             # x = 0
-            lx1, ly1 = self.on_screen(0, 0)
-            lx2, ly2 = self.on_screen(0, 1)
+            lx1, ly1 = 0, 0
+            lx2, ly2 = 0, 1
             self.add_line(lx1, ly1, lx2, ly2, color=(0, 0, 255))
             # draw dots
             y = self.get_val('startx')
             for n in range(int(self.max_gx)):
-                px, py = self.on_screen(n, y)
-                self.add_point(px, py)
+                self.add_point(n, y)
                 y = get_next(self.get_val('a'), y)
 
         end = time.clock()

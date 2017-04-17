@@ -32,7 +32,7 @@ class Value(object):
             self.value = new_value
 
     def cast(self, cast_value):
-        return None
+        return cast_value
 
     def is_valid(self, new_value):
         """
@@ -138,7 +138,14 @@ class IntValue(NumberValue):
             try:
                 return int(cast_value)
             except ValueError:
-                return None
+                if isinstance(cast_value, str) and '^' in cast_value:
+                    try:
+                        a, b = map(int, cast_value.replace(' ', '').split('^'))
+                        return a ** b
+                    except ValueError:
+                        return None
+                else:
+                    return None
 
 
 class FloatValue(NumberValue):
@@ -255,6 +262,9 @@ class ValSet:
 
     def __init__(self):
         self.vals = {}
+
+    def add_value(self, name, value):
+        self.vals[name] = Value(value)
 
     def add_int_value(self, name, value, limit='', inclusive='ul', low=0, high=1):
         """

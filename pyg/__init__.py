@@ -1,6 +1,8 @@
 """
 A graphics package using pyglet.
 
+Install pyglet from bitbucket to fix stupid event loop
+
 TODO:
 finish documentation.
 status line at bottom?
@@ -15,6 +17,9 @@ resize vertex_list vs creating new one?
 add updatefunc to sliders
 is there any point of having focusable
 redo focus logic for more modularity
+
+add parent and batch as first arguments
+pass all valobjs by string
 """
 
 

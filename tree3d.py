@@ -37,6 +37,8 @@ import random
 palette = [(155, 87, 18), (196, 103, 9), (224, 137, 31), (143, 224, 31), (89, 216, 30), (25, 186, 16)]
 
 
+
+
 def get_theta(theta):
     """
     Returns a random theta from a gaussian distribution with variance 2.5
@@ -101,6 +103,7 @@ class Tree2D(pyg.screen.GraphScreen):
         """
         Renders the screen.
         """
+
         iter = self.get_val('iter')
         theta = self.get_val('theta')
         ratio = self.get_val('ratio')
@@ -109,7 +112,7 @@ class Tree2D(pyg.screen.GraphScreen):
             seeds = []
             if iter:
                 self.add_line(0, 0, 0, 4, color=palette[0])
-                seeds.append([Vector(0, 4), Vector(0, 4)])
+                seeds.append([vecf(0, 4), vecf(0, 4)])
             for i in range(iter):
                 if i < 5:
                     color = palette[i]
@@ -121,9 +124,9 @@ class Tree2D(pyg.screen.GraphScreen):
                     rtheta2 = -get_theta(theta)
                     rbranches = get_branches(branches)
                     for b in range(rbranches):
-                        nv = Vector(*v)
+                        nv = vecf(*v)
                         btheta = rtheta1 - b * ((rtheta1 - rtheta2) / (rbranches - 1))
-                        nv.rotate2d(btheta)
+                        v_rotate2(nv, btheta)
                         nv *= get_ratio(ratio)
                         self.add_line(*t, *(t + nv), color=color)
                         new_seeds.append([t + nv, nv])
@@ -174,7 +177,7 @@ class Tree3D(pyg.screen.Screen3D):
 
             dist = 50
             seeds = []
-            d = ~Vector(0, 0, 1)
+            d = norm(vecf(0, 0, 1))
             if iter:
                 self.add_line(0, 0, 0, *(d * dist), color=palette[0])
                 seeds.append((d * dist, d * dist))
@@ -188,11 +191,11 @@ class Tree3D(pyg.screen.Screen3D):
                     rbranches = get_branches(branches)
                     theta1 = random.random() * 360
                     for b in range(rbranches):
-                        nv = Vector(*v)
+                        nv = vecf(*v)
                         rtheta = get_theta(theta)
-                        axis2d = Vector(1, 0).rotate2d(theta1 + b * 360 / branches)
-                        axis = Vector(*axis2d, 0)
-                        nv.rotate3d(rtheta, axis)
+                        axis2d = v_rotate2(vecf(1, 0), theta1 + b * 360 / branches)
+                        axis = vecf(*axis2d, 0)
+                        v_rotate3(nv, rtheta, axis)
                         nv *= get_ratio(ratio)
                         self.add_line(*t, *(t + nv), color=color)
                         new_seeds.append([t + nv, nv])
@@ -226,9 +229,9 @@ class Test3D(pyg.window.Window):
         self.add_float_field('ratio', 100, 60, 120, 15, 'Ratio', self.get_valobj('ratio'))
         self.add_int_field('branches', 100, 40, 120, 15, 'Branches', self.get_valobj('branches'))
 
-        tree2d = Tree2D(0, 200, 500, 500, 0, 5, 10, 10, self.valset, self.get_valobj('gz'))
+        tree2d = Tree2D(self, 0, 200, 500, 500, 0, 5, 10, 10, 'gz')
         self.add_screen('2d', tree2d)
-        tree3d = Tree3D(0, 200, 500, 500, Vector(0, 0, -200), Vector(-75, 0, 45), v_zero(3), self.valset, bg=(255, 255, 255))
+        tree3d = Tree3D(self, 0, 200, 500, 500, [0, 0, -200], [-75, 0, 45], [0, 0, 0], bg=(255, 255, 255))
         tree3d.off()
         self.add_screen('3d', tree3d)
 
@@ -256,4 +259,4 @@ class Test3D(pyg.window.Window):
         self.render()
 
 if __name__ == '__main__':
-    pyg.run(Test3D, caption='Fractal Tree')
+    pyg.run(Test3D, width=500, height=700, caption='Fractal Tree')

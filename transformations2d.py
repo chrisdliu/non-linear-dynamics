@@ -99,7 +99,7 @@ class TransformationScreen(pyg.screen.GraphScreen):
         self.t_list = []
         self.p_list = []
 
-        #self.load_alphabet()
+        # self.load_alphabet()
 
         self.t_list.append([m_scale(.5, .5)])
         self.t_list.append([m_scale(.5, .5), m_trans(2.5, 5)])
@@ -174,7 +174,7 @@ class TransformationWindow(pyg.window.Window):
 
     def set_vars(self):
         self.add_float_value('gz', .5, limit='ul', inclusive='', low=0, high=1)
-        self.add_screen('main', TransformationScreen(0, 250, 800, 500, 5, 5, 10 * 8 / 5, 10, self.valset, self.get_valobj('gz')))
+        self.add_screen('main', TransformationScreen(self, 0, 250, 800, 500, 5, 5, 10 * 8 / 5, 10, 'gz'))
         self.add_button('resetscreen', 10, 80, 40, 30, 'Reset\nScreen', self.get_screen('main').reset_screen)
         self.add_button('redraw', 60, 80, 40, 30, 'Redraw\nScreen', self.redraw)
         self.add_button('reset', 10, 10, 40, 30, 'Reset\nSystem', self.reset)

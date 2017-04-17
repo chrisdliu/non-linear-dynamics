@@ -18,11 +18,11 @@ class GuiObject:
     """
     Basic gui object class (boxes, labels).
 
-    :var x: x coord
-    :var y: y coord
-    :var w: width
-    :var h: height
-    :var visible: if the gui object is drawn
+    :ivar x: x coord
+    :ivar y: y coord
+    :ivar w: width
+    :ivar h: height
+    :ivar visible: if the gui object is drawn
     """
 
     og0 = _graphics.OrderedGroup(0)
@@ -117,11 +117,11 @@ class Label(GuiObject):
     """
     A label class (text).
 
-    :var x: x coord
-    :var y: y coord
-    :var text: text
-    :var color: color
-    :var visible: if the label is drawn
+    :ivar x: x coord
+    :ivar y: y coord
+    :ivar text: text
+    :ivar color: color
+    :ivar visible: if the label is drawn
     """
 
     def __init__(self, x, y, text, batch, parent, color=(255, 255, 255), visible=True, **kwargs):
@@ -172,14 +172,14 @@ class GuiComponent(GuiObject):
     """
     Base gui component (buttons, fields, sliders) class.
 
-    :var x: x coord
-    :var y: y coord
-    :var w: width
-    :var h: height
-    :var visible: if the component is drawn
-    :var focusable: if the component can be in focus
-    :var is_focus: if the component is in focus
-    :var is_hover: if the mouse is hovering over the component
+    :ivar x: x coord
+    :ivar y: y coord
+    :ivar w: width
+    :ivar h: height
+    :ivar visible: if the component is drawn
+    :ivar focusable: if the component can be in focus
+    :ivar is_focus: if the component is in focus
+    :ivar is_hover: if the mouse is hovering over the component
     """
 
     _vertex_types = ('quads',)
@@ -357,20 +357,20 @@ class Button(GuiComponent):
     """
     A button class.
 
-    :var x: x coord
-    :var y: y coord
-    :var w: width
-    :var h: height
-    :var text: text
-    :var action: function called when pressed
-    :var focusable: if the component can be in focus
-    :var is_focus: if the component is in focus
-    :var is_hover: if the mouse is hovering over the component
-    :var visible: if the component is drawn
-    :var guiobjs: dictionary of gui objects
+    :ivar x: x coord
+    :ivar y: y coord
+    :ivar w: width
+    :ivar h: height
+    :ivar text: text
+    :ivar action: function called when pressed
+    :ivar focusable: if the component can be in focus
+    :ivar is_focus: if the component is in focus
+    :ivar is_hover: if the mouse is hovering over the component
+    :ivar visible: if the component is drawn
+    :ivar guiobjs: dictionary of gui objects
     """
 
-    def __init__(self, x, y, width, height, text, batch, parent, action=None, argsfunc=None, visible=True, interfaced=False):
+    def __init__(self, x, y, width, height, text, batch, parent, action=None, argsfunc=None, multiline=False, visible=True, interfaced=False):
         """
         Button constructor.
 
@@ -386,13 +386,18 @@ class Button(GuiComponent):
         :param text: text
         :type batch: pyglet.graphics.Batch
         :param batch: the window's batch
-        :type action: function
         :param action: the function called when pressed
         """
         super().__init__(x, y, width, height, batch, parent, True, visible, interfaced)
         self.action = action
         self.argsfunc = argsfunc
-        self.add_label('label', x, y + height, text, anchor_y='top', width=width, multiline=True)
+        lines = text.split('\n')
+        for i in range(len(lines)):
+            self.add_label('label_%d' % i, x + width / 2, y + (i + 1) * (height / (len(lines) + 1)), lines[i],
+                           anchor_x='center', anchor_y='center', width=width)
+
+        # self.add_label('label', x + width / 2, y + height / 2, text, anchor_x='center', anchor_y='center',
+        #                width=width, multiline=multiline)
 
     def mouse_up(self, x, y, buttons, modifiers):
         if self.action:
@@ -429,20 +434,20 @@ class ToggleButton(Button):
     """
     A toggle button class (linked to a BoolValue).
 
-    :var x: x coord
-    :var y: y coord
-    :var z: z level
-    :var w: width
-    :var h: height
-    :var text: text
-    :var focusable: if the component can be in focus
-    :var is_focus: if the component is in focus
-    :var is_hover: if the mouse is hovering over the component
-    :var visible: if the component is drawn
-    :var guiobjs: dictionary of gui objects
+    :ivar x: x coord
+    :ivar y: y coord
+    :ivar z: z level
+    :ivar w: width
+    :ivar h: height
+    :ivar text: text
+    :ivar focusable: if the component can be in focus
+    :ivar is_focus: if the component is in focus
+    :ivar is_hover: if the mouse is hovering over the component
+    :ivar visible: if the component is drawn
+    :ivar guiobjs: dictionary of gui objects
     """
 
-    def __init__(self, x, y, width, height, text, boolval, batch, parent, visible=True, interfaced=False):
+    def __init__(self, x, y, width, height, text, boolval, batch, parent, multiline=False, visible=True, interfaced=False):
         """
         Toggle button constructor.
 
@@ -465,7 +470,7 @@ class ToggleButton(Button):
         # has to know value before render
         # does it render on init?
         self.boolval = boolval
-        super().__init__(x, y, width, height, text, batch, parent, self.toggle, None, visible, interfaced)
+        super().__init__(x, y, width, height, text, batch, parent, self.toggle, None, multiline, visible, interfaced)
         self.add_label('label', x, y, text)
 
     def toggle(self):
@@ -579,6 +584,13 @@ class NumberField(Field):
 
 
 class IntField(NumberField):
+    accepted = (
+        '0', '1', '2', '3',
+        '4', '5', '6', '7',
+        '8', '9', '.', '-',
+        '^',
+    )
+
     def __init__(self, x, y, w, h, name, valobj, batch, parent, visible=True, interfaced=False):
         if type(valobj) is not IntValue:
             raise TypeError('Value object is not a IntValue!')
@@ -641,8 +653,8 @@ class Slider(GuiComponent):
 
 class HSlider(Slider):
     def __init__(self, x, y, w, h, field_name, valobj, batch, parent, low=None, high=None, visible=True, interfaced=False):
-        super().__init__(x, y, w, h, valobj, batch, parent, low, high, visible, interfaced)
         self.field_name = field_name
+        super().__init__(x, y, w, h, valobj, batch, parent, low, high, visible, interfaced)
         self.add_label('label', x, y, self.get_label_text())
 
     def set_pos(self, x, y):

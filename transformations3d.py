@@ -176,8 +176,9 @@ class Transformation3DWindow(pyg.window.Window):
 
     def set_vars(self):
         self.add_float_value('gz', .5, limit='ul', inclusive='', low=0, high=1)
-        self.add_screen('main', Transformation3DScreen(0, 250, 800, 500, [0, 20, -200], [-75, 0, -135], [0, 0, 0],
-                                                       self.valset, bg=(0, 0, 0)))
+        self.add_screen('main', Transformation3DScreen(self, 0, 250, 800, 500,
+                                                       [0, 20, -200], [-75, 0, -135], [0, 0, 0],
+                                                       bg=(0, 0, 0)))
         self.add_button('redraw', 60, 80, 40, 30, 'Redraw\nScreen', self.redraw)
         self.add_button('reset', 10, 10, 40, 30, 'Reset\nSystem', self.reset)
 

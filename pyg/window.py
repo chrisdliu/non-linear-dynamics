@@ -46,10 +46,9 @@ class Window(_win.Window):
         """
         super().__init__(width=width, height=height, caption=caption, *args, **kwargs)
         self.set_minimum_size(width, height)
+        self.real_width, self.real_height = width, height
 
         self.set_bg(bg)
-        # glClearColor(*[_floor(color % 256) / 255 for color in bg], 1)
-        # self.bg = bg
 
         self._batch = _graphics.Batch()
         self.screens = {}
@@ -58,7 +57,6 @@ class Window(_win.Window):
         self.fields = {}
         self.sliders = {}
         self.labelrows = {}
-        self.colorpickers = {}
         self.valset = ValSet()
 
         self.focus = None
@@ -71,6 +69,9 @@ class Window(_win.Window):
         self.ticktime = ticktime
         if ticktime > 0:
             _clock.schedule_interval(self.tick, ticktime)
+
+        if isinstance(self, _win.cocoa.CocoaWindow):
+            self.on_resize = self._retina_on_resize
 
     def set_vars(self):
         """
@@ -101,7 +102,7 @@ class Window(_win.Window):
     def tick(self, dt):
         for screen in self.screens.values():
             if screen.active:
-                screen.tick()
+                screen.tick(dt)
 
     # region add gui components
     def add_screen(self, name, screen):
@@ -132,7 +133,7 @@ class Window(_win.Window):
         """
         self.labels[name] = Label(x, y, text, self._batch, self, color, visible)
 
-    def add_button(self, name, x, y, width, height, text, action=None, argsfunc=None, visible=True, interfaced=False):
+    def add_button(self, name, x, y, width, height, text, action=None, argsfunc=None, multiline=False, visible=True, interfaced=False):
         """
         Adds a button.
 
@@ -151,9 +152,9 @@ class Window(_win.Window):
         :type action: function
         :param action: function called when pressed
         """
-        self.buttons[name] = Button(x, y, width, height, text, self._batch, self, action, argsfunc, visible, interfaced)
+        self.buttons[name] = Button(x, y, width, height, text, self._batch, self, action, argsfunc, multiline, visible, interfaced)
 
-    def add_toggle_button(self, name, x, y, width, height, text, boolval, visible=True, interfaced=False):
+    def add_toggle_button(self, name, x, y, width, height, text, boolval, multiline=False, visible=True, interfaced=False):
         """
         Adds a toggle button.
 
@@ -172,7 +173,7 @@ class Window(_win.Window):
         :type boolval: BoolValue
         :param boolval: the bool value linked with the button
         """
-        self.buttons[name] = ToggleButton(x, y, width, height, text, boolval, self._batch, visible, interfaced)
+        self.buttons[name] = ToggleButton(x, y, width, height, text, boolval, self._batch, multiline, visible, interfaced)
 
     def add_int_field(self, name, x, y, w, h, field_name, valobj, visible=True, interfaced=False):
         self.fields[name] = IntField(x, y, w, h, field_name, valobj, self._batch, self, visible, interfaced)
@@ -212,6 +213,9 @@ class Window(_win.Window):
     # endregion
 
     # region valset functions
+    def add_value(self, name, value):
+        self.valset.add_value(name, value)
+
     def add_int_value(self, name, value=0, limit='', inclusive='ul', low=0, high=1):
         """
         Adds an int value to the window's value set.
@@ -333,19 +337,19 @@ class Window(_win.Window):
         Draws all the batches to the screen.
         Should not be overridden.
         """
-        self.update_labels()
         self.clear()
+
         for screen in self.screens.values():
             if screen.visible:
                 screen.draw()
+
+        self.update_labels()
 
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         glOrtho(0, self.width, 0, self.height, -10, 10)
         glMatrixMode(GL_MODELVIEW)
-        #glEnable(GL_DEPTH_TEST)
         self._batch.draw()
-        #glDisable(GL_DEPTH_TEST)
 
     def render(self):
         """
@@ -371,9 +375,6 @@ class Window(_win.Window):
         for labelrow in self.labelrows.values():
             if labelrow.visible:
                 labelrow.render()
-        for colorpicker in self.colorpickers.values():
-            if colorpicker.visible:
-                colorpicker.render()
 
     # overriding base methods
     def on_draw(self):
@@ -381,10 +382,30 @@ class Window(_win.Window):
 
     def on_resize(self, width, height):
         super().on_resize(width, height)
+        self.real_width, self.real_height = width, height
+
         for screen in self.screens.values():
             screen.on_resize(width, height)
         self.render()
 
+    def _retina_on_resize(self, width, height):
+        """Override default implementation to support retina displays."""
+        view = self.context._nscontext.view()
+        bounds = view.convertRectToBacking_(view.bounds()).size
+        back_width, back_height = (int(bounds.width), int(bounds.height))
+        self.real_width, self.real_height = back_width, back_height
+
+        glViewport(0, 0, back_width, back_height)
+        glMatrixMode(gl.GL_PROJECTION)
+        glLoadIdentity()
+        glOrtho(0, width, 0, height, -1, 1)
+        glMatrixMode(gl.GL_MODELVIEW)
+
+        for screen in self.screens.values():
+            screen.on_resize(width, height)
+        self.render()
+
+    #region events
     def on_mouse_motion(self, x, y, dx, dy):
         self._base_mouse_move(x, y, dx, dy)
         self.mouse_move(x, y, dx, dy)
@@ -483,10 +504,6 @@ class Window(_win.Window):
                     self.focus = slider
                     self.focus.focus_on()
                     return
-            for colorpicker in self.colorpickers.values():
-                if colorpicker.visible and colorpicker.is_inside(x, y):
-                    colorpicker.mouse_down(x, y, buttons, modifiers)
-                    return
 
     def _base_mouse_up(self, x, y, buttons, modifiers):
         # print('up')
@@ -546,3 +563,7 @@ class Window(_win.Window):
     def text_input(self, text):
         if self.focus:
             self.focus.text_input(text)
+    #endregion
+
+    def what(self):
+        pass
