@@ -126,7 +126,7 @@ class Tree2D(pyg.screen.GraphScreen):
                     for b in range(rbranches):
                         nv = vecf(*v)
                         btheta = rtheta1 - b * ((rtheta1 - rtheta2) / (rbranches - 1))
-                        v_rotate2(nv, btheta)
+                        vi_rotate2(nv, btheta)
                         nv *= get_ratio(ratio)
                         self.add_line(*t, *(t + nv), color=color)
                         new_seeds.append([t + nv, nv])
@@ -193,9 +193,9 @@ class Tree3D(pyg.screen.Screen3D):
                     for b in range(rbranches):
                         nv = vecf(*v)
                         rtheta = get_theta(theta)
-                        axis2d = v_rotate2(vecf(1, 0), theta1 + b * 360 / branches)
+                        axis2d = vi_rotate2(vecf(1, 0), theta1 + b * 360 / branches)
                         axis = vecf(*axis2d, 0)
-                        v_rotate3(nv, rtheta, axis)
+                        vi_rotate3(nv, rtheta, axis)
                         nv *= get_ratio(ratio)
                         self.add_line(*t, *(t + nv), color=color)
                         new_seeds.append([t + nv, nv])

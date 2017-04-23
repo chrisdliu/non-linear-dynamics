@@ -6,8 +6,8 @@ from vmath import *
 
 class SierpScreen(pyg.screen.GraphScreen):
     def render(self):
-        tri = (Vector(*self.on_screen(1, 1)), Vector(*self.on_screen(3, 1)), Vector(*self.on_screen(2, 1 + 3 ** .5)))
-        p = Vector(*self.on_screen(2, 1))
+        tri = (vecf(*self.on_screen(1, 1)), vecf(*self.on_screen(3, 1)), vecf(*self.on_screen(2, 1 + 3 ** .5)))
+        p = vecf(*self.on_screen(2, 1))
         colors = ((255, 0, 0), (0, 255, 0), (0, 0, 255))
 
         for i in range(self.get_val('iter')):
@@ -26,7 +26,7 @@ class SierpWindow(pyg.window.Window):
         self.valset.add_int_value('iter', 5000, limit='ul', low=1, high=100000)
         self.valset.add_float_value('zoomratio', .5, limit='ul', inclusive='')
 
-        self.add_screen('main', SierpScreen(0, 200, 500, 500, 2, 2, 4, 4, self.valset, self.get_valobj('zoomratio')))
+        self.add_screen('main', SierpScreen(0, 200, 500, 500, 2, 2, 4, 4, self.valset, 'zoomratio'))
 
         self.add_float_field('zoomfield', 100, 130, 120, 15, 'Zoom Ratio', self.get_valobj('zoomratio'))
         self.add_int_field('iterfield', 100, 100, 120, 15, 'Iter', self.get_valobj('iter'))
@@ -34,4 +34,4 @@ class SierpWindow(pyg.window.Window):
         self.add_button('resetb', 10, 10, 40, 40, 'Reset', self.get_screen('main').reset_screen)
 
 
-pyg.run(SierpWindow, caption='Sierpinski')
+pyg.run(SierpWindow, width=500, height=700, caption='Sierpinski')

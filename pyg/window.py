@@ -57,6 +57,7 @@ class Window(_win.Window):
         self.fields = {}
         self.sliders = {}
         self.labelrows = {}
+        self.boxes = {}
         self.valset = ValSet()
 
         self.focus = None
@@ -116,7 +117,10 @@ class Window(_win.Window):
         """
         self.screens[name] = screen
 
-    def add_label(self, name, x=0, y=0, text='', color=(255, 255, 255), visible=True):
+    def add_box(self, name, box):
+        self.boxes[name] = box
+
+    def add_label(self, name, x=0, y=0, text='', color=(255, 255, 255), visible=True, **kwargs):
         """
         Adds a label.
 
@@ -131,9 +135,9 @@ class Window(_win.Window):
         :type color: list(int * 3)
         :param color: color
         """
-        self.labels[name] = Label(x, y, text, self._batch, self, color, visible)
+        self.labels[name] = Label(self, name, x, y, text, color, visible, **kwargs)
 
-    def add_button(self, name, x, y, width, height, text, action=None, argsfunc=None, multiline=False, visible=True, interfaced=False):
+    def add_button(self, name, x, y, width, height, text, action=None, argsfunc=None, visible=True, interfaced=False):
         """
         Adds a button.
 
@@ -152,9 +156,9 @@ class Window(_win.Window):
         :type action: function
         :param action: function called when pressed
         """
-        self.buttons[name] = Button(x, y, width, height, text, self._batch, self, action, argsfunc, multiline, visible, interfaced)
+        self.buttons[name] = Button(self, name, x, y, width, height, text, action, argsfunc, visible, interfaced)
 
-    def add_toggle_button(self, name, x, y, width, height, text, boolval, multiline=False, visible=True, interfaced=False):
+    def add_toggle_button(self, name, x, y, width, height, text, boolval, visible=True, interfaced=False):
         """
         Adds a toggle button.
 
@@ -173,26 +177,25 @@ class Window(_win.Window):
         :type boolval: BoolValue
         :param boolval: the bool value linked with the button
         """
-        self.buttons[name] = ToggleButton(x, y, width, height, text, boolval, self._batch, multiline, visible, interfaced)
+        self.buttons[name] = ToggleButton(self, name, x, y, width, height, text, boolval, visible, interfaced)
 
     def add_int_field(self, name, x, y, w, h, field_name, valobj, visible=True, interfaced=False):
-        self.fields[name] = IntField(x, y, w, h, field_name, valobj, self._batch, self, visible, interfaced)
+        self.fields[name] = IntField(self, name, x, y, w, h, field_name, valobj, visible, interfaced)
 
     def add_float_field(self, name, x, y, w, h, field_name, valobj, visible=True, interfaced=False):
-        self.fields[name] = FloatField(x, y, w, h, field_name, valobj, self._batch, self, visible, interfaced)
+        self.fields[name] = FloatField(self, name, x, y, w, h, field_name, valobj, visible, interfaced)
 
     def add_complex_field(self, name, x, y, w, h, field_name, valobj, visible=True, interfaced=False):
-        self.fields[name] = ComplexField(x, y, w, h, field_name, valobj, self._batch, self, visible, interfaced)
+        self.fields[name] = ComplexField(self, name, x, y, w, h, field_name, valobj, visible, interfaced)
 
-    def add_int_hslider(self, name, x, y, w, h, field_name, valobj, low=None, high=None, visible=True, interfaced=False):
-        self.sliders[name] = IntHSlider(x, y, w, h, field_name, valobj, self._batch, self, low, high, visible, interfaced)
+    def add_int_hslider(self, name, x, y, w, h, field_name, valobj, low=None, high=None, updatefunc=None, visible=True, interfaced=False):
+        self.sliders[name] = IntHSlider(self, name, x, y, w, h, field_name, valobj, low, high, updatefunc, visible, interfaced)
 
-    def add_int_vslider(self, name, x, y, w, h, valobj, low, high, visible=True, interfaced=False):
-        self.sliders[name] = IntVSlider(x, y, w, h, valobj, self._batch, self, low, high, visible, interfaced)
+    def add_int_vslider(self, name, x, y, w, h, valobj, low, high, updatefunc=None, visible=True, interfaced=False):
+        self.sliders[name] = IntVSlider(self, name, x, y, w, h, valobj, low, high, updatefunc, visible, interfaced)
 
-    def add_label_row(self, name, x, y, w, h, maxchars, maxrows, rowfunc, visible=True, interfaced=False):
-        self.labelrows[name] = LabelRow(name, x, y, w, h, maxchars, maxrows, rowfunc,
-                                        self._batch, self, visible, interfaced)
+    def add_label_row(self, name, x, y, w, h, maxchars, maxrows, strfunc, visible=True, interfaced=False):
+        self.labelrows[name] = LabelRow(self, name, x, y, w, h, maxchars, maxrows, strfunc, visible, interfaced)
     # endregion
 
     # region get gui components
@@ -370,6 +373,10 @@ class Window(_win.Window):
         for slider in self.sliders.values():
             if slider.visible and not slider.interfaced:
                 slider.render()
+
+        for box in self.boxes.values():
+            if box.visible and not box.interfaced:
+                box.render()
 
         # gui interfaces
         for labelrow in self.labelrows.values():

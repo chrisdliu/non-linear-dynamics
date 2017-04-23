@@ -16,7 +16,7 @@ def rdim(x, y, w, h):
 
 class GuiObject:
     """
-    Basic gui object class (boxes, labels).
+    Basic gui object class (labels, guicomponents).
 
     :ivar x: x coord
     :ivar y: y coord
@@ -29,7 +29,7 @@ class GuiObject:
     og1 = _graphics.OrderedGroup(1)
     og2 = _graphics.OrderedGroup(2)
 
-    def __init__(self, x, y, width, height, batch, parent, visible=True):
+    def __init__(self, parent, name, x, y, width, height, visible=True):
         """
         Gui object constructor.
 
@@ -46,12 +46,13 @@ class GuiObject:
         :type visible: bool
         :param visible: if the gui object is drawn
         """
+        self.parent = parent
+        self._batch = parent._batch
+        self.name = name
         self.x = x
         self.y = y
         self.w = width
         self.h = height
-        self._batch = batch
-        self._parent = parent
         self.visible = visible
 
     def set_pos(self, x, y):
@@ -70,10 +71,8 @@ class GuiObject:
         """
         Sets the gui object's dimensions
 
-        :type w: int
-        :param w: width
-        :type h: int
-        :param h: height
+        :param int width: width
+        :param int height: height
         :return:
         """
         self.w = width
@@ -124,7 +123,7 @@ class Label(GuiObject):
     :ivar visible: if the label is drawn
     """
 
-    def __init__(self, x, y, text, batch, parent, color=(255, 255, 255), visible=True, **kwargs):
+    def __init__(self, parent, name, x, y, text, color=(255, 255, 255), visible=True, **kwargs):
         """
         Label constructor.
 
@@ -139,9 +138,9 @@ class Label(GuiObject):
         :type color: list(int * 3)
         :param color: color
         """
-        super().__init__(x, y, 0, 0, batch, parent, visible)
+        super().__init__(parent, name, x, y, 0, 0, visible)
         self.text = text
-        self._pyglet_label = _text.Label(text, font_name='Menlo', font_size=8, x=x, y=y, batch=batch,
+        self._pyglet_label = _text.Label(text, font_name='Menlo', font_size=8, x=x, y=y, batch=parent._batch,
                                          group=self.og2, color=(*color, 255), **kwargs)
         self.set_visible(visible)
 
@@ -184,7 +183,7 @@ class GuiComponent(GuiObject):
 
     _vertex_types = ('quads',)
 
-    def __init__(self, x, y, width, height, batch, parent, focusable=False, visible=True, interfaced=False):
+    def __init__(self, parent, name, x, y, width, height, focusable=False, visible=True, interfaced=False):
         """
         Gui component constructor.
 
@@ -203,11 +202,11 @@ class GuiComponent(GuiObject):
         :type visible: bool
         :param visible: if the gui component is drawn
         """
-        super().__init__(x, y, width, height, batch, parent, visible)
+        super().__init__(parent, name, x, y, width, height, visible)
         self.focusable = focusable
+        self.interfaced = interfaced
         self.is_focus = False
         self.is_hover = False
-        self.interfaced = interfaced
 
         self.labels = {}
 
@@ -272,8 +271,8 @@ class GuiComponent(GuiObject):
         for label in self.labels.values():
             label.set_visible(visible)
 
-    def add_label(self, name, x, y, text, color=(255, 255, 255), **kwargs):
-        self.labels[name] = Label(x, y, text, self._batch, self._parent, color=color, **kwargs)
+    def add_label(self, name, x, y, text='', color=(255, 255, 255), **kwargs):
+        self.labels[name] = Label(self.parent, name, x, y, text, color=color, **kwargs)
 
     def add_quad(self, x1, y1, x2, y2, x3, y3, x4, y4, color=(0, 0, 0), uniform=True, colors=None):
         """
@@ -281,30 +280,17 @@ class GuiComponent(GuiObject):
         If uniform, draws using color parameter.
         If non-uniform, draws using colors parameter.
 
-        :type x1: float
-        :param x1: x1
-        :type y1: float
-        :param y1: y1
-        :type x2: float
-        :param x2: x2
-        :type y2: float
-        :param y2: y2
-        :type x3: float
-        :param x3: x3
-        :type y3: float
-        :param y3: y3
-        :type x4: float
-        :param x4: x4
-        :type y4: float
-        :param y4: y4
-        :type z: float
-        :param z: z
-        :type color: list(int * 3)
-        :param color: color
-        :type uniform: bool
-        :param uniform: uniform coloring
-        :type colors: list(int * 12)
-        :param colors: non-uniform coloring
+        :param float x1: x1
+        :param float y1: y1
+        :param float x2: x2
+        :param float y2: y2
+        :param float x3: x3
+        :param float y3: y3
+        :param float x4: x4
+        :param float y4: y4
+        :param list(int * 3) color: color
+        :param bool uniform: uniform coloring
+        :param list(int * 12) colors: non-uniform coloring
         """
         self._vertexes['quads'].extend((x1, y1, x2, y2, x3, y3, x4, y4))
         if uniform:
@@ -370,7 +356,7 @@ class Button(GuiComponent):
     :ivar guiobjs: dictionary of gui objects
     """
 
-    def __init__(self, x, y, width, height, text, batch, parent, action=None, argsfunc=None, multiline=False, visible=True, interfaced=False):
+    def __init__(self, parent, name, x, y, width, height, text, action=None, argsfunc=None, visible=True, interfaced=False):
         """
         Button constructor.
 
@@ -388,16 +374,13 @@ class Button(GuiComponent):
         :param batch: the window's batch
         :param action: the function called when pressed
         """
-        super().__init__(x, y, width, height, batch, parent, True, visible, interfaced)
+        super().__init__(parent, name, x, y, width, height, True, visible, interfaced)
         self.action = action
         self.argsfunc = argsfunc
         lines = text.split('\n')
         for i in range(len(lines)):
-            self.add_label('label_%d' % i, x + width / 2, y + (i + 1) * (height / (len(lines) + 1)), lines[i],
+            self.add_label('label_%d' % i, x + width / 2, y + height - (i + 1) * (height / (len(lines) + 1)), lines[i],
                            anchor_x='center', anchor_y='center', width=width)
-
-        # self.add_label('label', x + width / 2, y + height / 2, text, anchor_x='center', anchor_y='center',
-        #                width=width, multiline=multiline)
 
     def mouse_up(self, x, y, buttons, modifiers):
         if self.action:
@@ -414,8 +397,7 @@ class Button(GuiComponent):
         """
         Sets the button's text.
 
-        :type text: str
-        :param text: button text
+        :param str text: button text
         """
         self.labels['label'].set_text(text)
 
@@ -447,7 +429,7 @@ class ToggleButton(Button):
     :ivar guiobjs: dictionary of gui objects
     """
 
-    def __init__(self, x, y, width, height, text, boolval, batch, parent, multiline=False, visible=True, interfaced=False):
+    def __init__(self, parent, name, x, y, width, height, text, boolval, visible=True, interfaced=False):
         """
         Toggle button constructor.
 
@@ -470,8 +452,7 @@ class ToggleButton(Button):
         # has to know value before render
         # does it render on init?
         self.boolval = boolval
-        super().__init__(x, y, width, height, text, batch, parent, self.toggle, None, multiline, visible, interfaced)
-        self.add_label('label', x, y, text)
+        super().__init__(parent, name, x, y, width, height, text, self.toggle, None, visible, interfaced)
 
     def toggle(self):
         """
@@ -506,9 +487,9 @@ class ToggleButton(Button):
 class Field(GuiComponent):
     accepted = ()
 
-    def __init__(self, x, y, w, h, name, valobj, batch, parent, visible=True, interfaced=False):
-        super().__init__(x, y, w, h, batch, parent, True, visible, interfaced)
-        self.name = name
+    def __init__(self, parent, name, x, y, w, h, field_name, valobj, visible=True, interfaced=False):
+        super().__init__(parent, name, x, y, w, h, True, visible, interfaced)
+        self.field_name = field_name
         self.valobj = valobj
         self.input = ''
         self.input_accepted = False
@@ -547,9 +528,9 @@ class Field(GuiComponent):
 
     def get_label_text(self):
         if self.is_focus:
-            return '%s: %s' % (self.name, self.input)
+            return '%s: %s' % (self.field_name, self.input)
         else:
-            return '%s: %s' % (self.name, str(self.valobj))
+            return '%s: %s' % (self.field_name, str(self.valobj))
 
     def update_label(self):
         self.labels['label'].set_text(self.get_label_text())
@@ -591,17 +572,17 @@ class IntField(NumberField):
         '^',
     )
 
-    def __init__(self, x, y, w, h, name, valobj, batch, parent, visible=True, interfaced=False):
+    def __init__(self, parent, name, x, y, w, h, field_name, valobj, visible=True, interfaced=False):
         if type(valobj) is not IntValue:
             raise TypeError('Value object is not a IntValue!')
-        super().__init__(x, y, w, h, name, valobj, batch, parent, visible, interfaced)
+        super().__init__(parent, name, x, y, w, h, field_name, valobj, visible, interfaced)
 
 
 class FloatField(NumberField):
-    def __init__(self, x, y, w, h, name, valobj, batch, parent, visible=True, interfaced=False):
+    def __init__(self, parent, name, x, y, w, h, field_name, valobj, visible=True, interfaced=False):
         if type(valobj) is not FloatValue:
             raise TypeError('Value object is not a FloatValue!')
-        super().__init__(x, y, w, h, name, valobj, batch, parent, visible, interfaced)
+        super().__init__(parent, name, x, y, w, h, field_name, valobj, visible, interfaced)
 
 
 class ComplexField(NumberField):
@@ -612,22 +593,24 @@ class ComplexField(NumberField):
         'j',
     )
 
-    def __init__(self, x, y, w, h, name, valobj, batch, parent, visible=True, interfaced=False):
+    def __init__(self, parent, name, x, y, w, h, field_name, valobj, visible=True, interfaced=False):
         if type(valobj) is not ComplexValue:
             raise TypeError('Value object is not a ComplexValue!')
-        super().__init__(x, y, w, h, name, valobj, batch, parent, visible, interfaced)
+        super().__init__(parent, name, x, y, w, h, field_name, valobj, visible, interfaced)
 
 
 class Slider(GuiComponent):
-    def __init__(self, x, y, w, h, valobj, batch, parent, low=None, high=None, visible=True, interfaced=False):
-        super().__init__(x, y, w, h, batch, parent, True, visible, interfaced)
+    def __init__(self, parent, name, x, y, w, h, valobj, low=None, high=None, updatefunc=None, visible=True, interfaced=False):
+        super().__init__(parent, name, x, y, w, h, True, visible, interfaced)
         self.valobj = valobj
+        self.updatefunc = updatefunc
         if low is None:
             self.low = valobj.low
             self.high = valobj.high
         else:
             self.low = low
             self.high = high
+        self._slider_pos = 0
         self.update_slider_pos()
 
     def update_slider_pos(self):
@@ -635,6 +618,14 @@ class Slider(GuiComponent):
             self._slider_pos = (self.valobj.value - self.low) / (self.high - self.low)
         else:
             self._slider_pos = 0
+
+    def set_low(self, low):
+        if self.low != low and low <= self.high:
+            self.low = low
+            self.update_slider_pos()
+            new_value = (self._slider_pos * (self.high - self.low)) + self.low
+            self.valobj.set_val(new_value)
+            self.render()
 
     def set_high(self, high):
         if self.high != high and high >= self.low:
@@ -652,18 +643,19 @@ class Slider(GuiComponent):
 
 
 class HSlider(Slider):
-    def __init__(self, x, y, w, h, field_name, valobj, batch, parent, low=None, high=None, visible=True, interfaced=False):
+    def __init__(self, parent, name, x, y, w, h, field_name, valobj, low=None, high=None, updatefunc=None, visible=True, interfaced=False):
         self.field_name = field_name
-        super().__init__(x, y, w, h, valobj, batch, parent, low, high, visible, interfaced)
+        super().__init__(parent, name, x, y, w, h, valobj, low, high, updatefunc, visible, interfaced)
         self.add_label('label', x, y, self.get_label_text())
 
     def set_pos(self, x, y):
         super().set_pos(x, y)
         self.labels['label'].set_pos(x, y)
 
-    def update_slider_pos(self):
-        super().update_slider_pos()
-        self.labels['label'] = self.get_label_text()
+    def update(self):
+        self.update_slider_pos()
+        self.labels['label'].set_text(self.get_label_text())
+        self.render()
 
     def get_label_text(self):
         return self.field_name + ': ' + str(self.valobj.value)
@@ -686,16 +678,17 @@ class HSlider(Slider):
         if self._slider_pos > 1:
             self._slider_pos = 1
         new_value = (self._slider_pos * (self.high - self.low)) + self.low
-        self.valobj.set_val(new_value)
+        if self.valobj.set_val(new_value):
+            self.updatefunc()
         self.labels['label'].set_text(self.get_label_text())
         self.render()
 
 
 class IntHSlider(HSlider):
-    def __init__(self, x, y, w, h, field_name, valobj, batch, parent, low=None, high=None, visible=True, interfaced=False):
+    def __init__(self, parent, name, x, y, w, h, field_name, valobj, low=None, high=None, updatefunc=None, visible=True, interfaced=False):
         if type(valobj) is not IntValue:
             raise TypeError('Value object is not IntValue!')
-        super().__init__(x, y, w, h, field_name, valobj, batch, parent, low, high, visible, interfaced)
+        super().__init__(parent, name, x, y, w, h, field_name, valobj, low, high, updatefunc, visible, interfaced)
 
     def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         self._slider_pos = x / self.w
@@ -704,22 +697,22 @@ class IntHSlider(HSlider):
         if self._slider_pos > 1:
             self._slider_pos = 1
         new_value = (self._slider_pos * (self.high - self.low)) + self.low
-        self.valobj.set_val(new_value + .5)
+        if self.valobj.set_val(new_value + .5):
+            self.updatefunc()
         self.labels['label'].set_text(self.get_label_text())
         self.render()
 
 
 class FloatHSlider(HSlider):
-    def __init__(self, x, y, w, h, field_name, valobj, batch, parent, low=None, high=None, visible=True, interfaced=False):
+    def __init__(self, parent, name, x, y, w, h, field_name, valobj, low=None, high=None, updatefunc=None, visible=True, interfaced=False):
         if type(valobj) is not FloatValue:
             raise TypeError('Value object is not FloatValue!')
-        super().__init__(x, y, w, h, field_name, valobj, batch, parent, low, high, visible, interfaced)
+        super().__init__(parent, name, x, y, w, h, field_name, valobj, low, high, updatefunc, visible, interfaced)
 
 
 class VSlider(Slider):
-    def __init__(self, x, y, w, h, valobj, batch, parent, low=None, high=None, visible=True, interfaced=False):
-        super().__init__(x, y, w, h, valobj, batch, parent, low, high, visible, interfaced)
-        self.update_slider_pos()
+    def __init__(self, parent, name, x, y, w, h, valobj, low=None, high=None, updatefunc=None, visible=True, interfaced=False):
+        super().__init__(parent, name, x, y, w, h, valobj, low, high, updatefunc, visible, interfaced)
 
     def render(self):
         if self.is_focus:
@@ -739,15 +732,16 @@ class VSlider(Slider):
         if self._slider_pos > 1:
             self._slider_pos = 1
         new_value = (self._slider_pos * (self.high - self.low)) + self.low
-        self.valobj.set_val(new_value)
+        if self.valobj.set_val(new_value):
+            self.updatefunc()
         self.render()
 
 
 class IntVSlider(VSlider):
-    def __init__(self, x, y, w, h, valobj, batch, parent, low=None, high=None, visible=True, interfaced=False):
+    def __init__(self, parent, name, x, y, w, h, valobj, low=None, high=None, updatefunc=None, visible=True, interfaced=False):
         if type(valobj) is not IntValue:
             raise TypeError('Value object is not IntValue!')
-        super().__init__(x, y, w, h, valobj, batch, parent, low, high, visible, interfaced)
+        super().__init__(parent, name, x, y, w, h, valobj, low, high, updatefunc, visible, interfaced)
 
     def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         self._slider_pos = (self.h - y) / self.h
@@ -756,42 +750,46 @@ class IntVSlider(VSlider):
         if self._slider_pos > 1:
             self._slider_pos = 1
         new_value = (self._slider_pos * (self.high - self.low)) + self.low
-        self.valobj.set_val(new_value + .5)
+        if self.valobj.set_val(new_value + .5):
+            self.updatefunc()
         self.render()
 
-
+'''
 class LabelRowSlider(IntVSlider):
-    def __init__(self, x, y, w, h, valobj, labelrow, batch, parent, low=None, high=None, visible=True):
-        super().__init__(x, y, w, h, valobj, batch, parent, low, high, visible, True)
+    def __init__(self, parent, name, x, y, w, h, valobj, labelrow, low=None, high=None, updatefunc=None, visible=True):
+        super().__init__(parent, name, x, y, w, h, valobj, low, high, visible, True)
         self.labelrow = labelrow
 
     def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         super().mouse_drag(x, y, dx, dy, buttons, modifiers)
         if self.labelrow:
             self.labelrow.render()
+'''
 
 
 class LabelRow(GuiComponent):
-    def __init__(self, name, x, y, w, h, maxchars, maxrows, rowfunc, batch, parent, visible=True, interfaced=False):
-        super().__init__(x, y, w, h, batch, parent, False, visible, interfaced)
-        self.name = name
+    def __init__(self, parent, name, x, y, width, height, maxchars, maxrows, strfunc, visible=True, interfaced=False):
+        super().__init__(parent, name, x, y, width, height, False, visible, interfaced)
         self.maxchars = maxchars
         self.maxrows = maxrows
-        self.rowfunc = rowfunc
+        self.strfunc = strfunc
 
         parent.add_int_value(name + '__intvalue', limit='ul', low=0, high=0)
         self.valobj = parent.get_valobj(name + '__intvalue')
-        parent.sliders[name + '__intvslider'] = LabelRowSlider(x + w - 10, y, 10, h, self.valobj, self, self._batch, parent, visible=visible)
+        # parent.sliders[name + '__intvslider'] = LabelRowSlider(parent, name, x + width - 10, y, 10, height, self.valobj, self, visible=visible)
+
+        parent.sliders[name + '__intvslider'] = IntVSlider(parent, name, x + width - 10, y, 10, height, self.valobj,
+                                                           updatefunc=lambda: self.render(), visible=visible)
         self.slider = parent.sliders[name + '__intvslider']
 
         for i in range(maxrows):
-            self.add_label(i, x + 5, y + h - (i + 1) * (h / maxrows) + 5, '')
+            self.add_label(i, x + 5, y + height - (i + 1) * (height / maxrows) + 5, '')
 
     def render(self):
         self.add_quad(*rdim(self.x, self.y, self.w - 10, self.h), color=(50, 50, 50))
         for i in range(self.maxrows):
             self.labels[i].set_text('')
-        rows = self.rowfunc()
+        rows = self.strfunc()
         if len(rows) > 5:
             diff = len(rows) - 5 - self.valobj.high
             self.valobj.high = len(rows) - 5
@@ -814,3 +812,9 @@ class LabelRow(GuiComponent):
                 self.labels[i].set_text(row)
         self.flush()
         self.slider.render()
+
+
+class Box(GuiComponent):
+    def __init__(self, parent, name, x, y, width, height, visible=True, interfaced=False):
+        super().__init__(parent, name, x, y, width, height, False, visible, interfaced)
+        self.name = name

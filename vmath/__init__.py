@@ -15,8 +15,12 @@ def vecf(*x):
     return np.array(x, dtype=np.float)
 
 
-def zero(n):
+def zeroi(n):
     return veci([0] * n)
+
+
+def zerof(n):
+    return vecf([0] * n)
 
 
 def i2():
@@ -51,7 +55,10 @@ def norm(v):
     return v / mag(v)
 
 
-def v_rotate2(vector, theta, trans=None):
+def vi_rotate2(vector, theta, trans=None):
+    """
+    Inplace 2d rotation
+    """
     if len(vector) != 2:
         raise ArithmeticError('Vector must have 2 elements.')
     if trans is not None and len(trans) != 2:
@@ -67,12 +74,15 @@ def v_rotate2(vector, theta, trans=None):
 
 
 def vn_rotate2(vector, theta, trans=None):
+    """
+    Returns 2d rotation result
+    """
     result = vecf(*vector)
-    v_rotate2(result, theta, trans)
+    vi_rotate2(result, theta, trans)
     return result
 
 
-def v_rotate3(vector, theta, axis, trans=None):
+def vi_rotate3(vector, theta, axis, trans=None):
     if len(vector) != 3:
         raise ArithmeticError('Vector must have 3 elements.')
     if len(axis) != 3:
@@ -103,7 +113,7 @@ def v_rotate3(vector, theta, axis, trans=None):
 
 def vn_rotate3(vector, theta, axis, trans=None):
     result = vecf(*vector)
-    v_rotate3(result, theta, axis, trans)
+    vi_rotate3(result, theta, axis, trans)
     return result
 
 

@@ -6,9 +6,9 @@ import numpy as np
 class TestScreen(pyg.screen.GraphScreen):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        #self.pixels = np.full(100 * 100 * 3, 127, dtype=np.ubyte)
-        #raw = np.ctypeslib.as_ctypes(self.pixels)
-        #self.img = pyglet.image.ImageData(100, 100, 'RGB', raw)
+        self.pixels = np.full(100 * 100 * 3, 127, dtype=np.ubyte)
+        raw = np.ctypeslib.as_ctypes(self.pixels)
+        self.img = pyglet.image.ImageData(100, 100, 'RGB', raw)
 
         #self.pixels2 = np.array([255, 0, 0] * 10 * 3, dtype=np.ubyte)
         #raw = np.ctypeslib.as_ctypes(self.pixels2)
@@ -24,6 +24,8 @@ class TestScreen(pyg.screen.GraphScreen):
 
     def draw(self):
         super().draw()
+        self.img.blit(100, 100)
+        self.img.blit(100, 200)
         #self.img._current_texture = None
         #self.img.blit(100, 100)
         #self.pixels[1] = 0
@@ -40,5 +42,5 @@ class TestWindow(pyg.window.Window):
         self.add_screen('main', TestScreen(self, 200, 0, 500, 500, 50, 50, 50, 50, 'gz'))
         #self.add_screen('main', TestScreen(self, 200, 0, 500, 500))
 
-pyglet.clock.schedule_interval(lambda dt: print(dt), .01)
+
 pyg.run(TestWindow, width=700, height=500)

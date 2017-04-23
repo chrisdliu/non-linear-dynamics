@@ -35,8 +35,8 @@ class GOLScreen(pyg.screen.Screen2D):
         # clib setup
         self.clib = cdll.LoadLibrary('clib_fastimg.so')
 
-        self.wr = 1003
-        self.wc = 1003
+        self.wr = 5003
+        self.wc = 5003
         # world center
         self.wcx = 21
         self.wcy = 21
@@ -62,6 +62,9 @@ class GOLScreen(pyg.screen.Screen2D):
         lookup = np.empty(512, dtype=np.ubyte)
         for i in range(512):
             count = sum([i >> j & 1 for j in range(1, 9)])
+            # i = 011001010
+            # i & 1
+
             if i % 2:
                 if 1 < count < 4:
                     lookup[i] = 1

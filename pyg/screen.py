@@ -749,7 +749,7 @@ class GraphScreen(Screen2D):
         self.gw *= width / self.w
         self.gh *= height / self.h
         self._set_graph_minmax()
-        self.total_zoom *= (old_gw * old_gh) / (self.gw * self.gh)
+        # self.total_zoom *= (old_gw * old_gh) / (self.gw * self.gh)
         self.w = width
         self.h = height
 
@@ -880,7 +880,7 @@ class GraphScreen(Screen2D):
             self.gh *= self.zoom_valobj.value
             self._set_graph_minmax()
             self.total_zoom *= (1 / self.zoom_valobj.value) ** 2
-            #print('zoomed to %.5f,%.5f with size %.9f,%.9f' % (self.gx, self.gy, self.gw, self.gh))
+            # print('zoomed to %.5f,%.5f with size %.9f,%.9f' % (self.gx, self.gy, self.gw, self.gh))
         elif button == _win.mouse.RIGHT:
             self.gx = self.gx - self.gw / 2 + x * self.gw / self.w
             self.gy = self.gy - self.gh / 2 + y * self.gh / self.h
@@ -888,7 +888,7 @@ class GraphScreen(Screen2D):
             self.gh /= self.zoom_valobj.value
             self._set_graph_minmax()
             self.total_zoom /= (1 / self.zoom_valobj.value) ** 2
-            #print('zoomed to %.5f,%.5f with size %.9f,%.9f' % (self.gx, self.gy, self.gw, self.gh))
+            # print('zoomed to %.5f,%.5f with size %.9f,%.9f' % (self.gx, self.gy, self.gw, self.gh))
         elif button == _win.mouse.MIDDLE:
             self.drag = False
             msx1, msy1 = self.on_plot(self.mdownx, self.mdowny)

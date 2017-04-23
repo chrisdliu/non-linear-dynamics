@@ -17,7 +17,7 @@ j: previous saved coords
 k: next saved coords
 s: save current coords
 g: goto selected coords
-y: delete selected coords
+p: delete selected coords
 
 Note: split screen is really slow because of some stupid bug
 """
@@ -206,7 +206,7 @@ def get_pos(x, y, w):
 
 
 @jit
-def get_data(mode, w, h, bl_x, bl_y, tr_x, tr_y, limit, max_iter, c, palette):
+def get_data(mode, w, h, bl_x, bl_y, tr_x, tr_y, limit, max_iter, c, palette, pixels):
     """
     Passes arguments to vectorize_call() since it can't have a for loop without breaking for some stupid reason
     Then converts and returns the 2d RGB array into a 1d RGB array with separate RGB values
@@ -224,16 +224,103 @@ def get_data(mode, w, h, bl_x, bl_y, tr_x, tr_y, limit, max_iter, c, palette):
     :return: 1d RGB array with separate RGB values
     """
     color_data = vectorize_call(mode, w, h, bl_x, bl_y, tr_x, tr_y, limit, max_iter, c, palette)
-    idx_max = w * h * 3
-    colors = np.zeros(idx_max, dtype=np.int16)
+    # colors = np.zeros(idx_max, dtype=np.int16)
     for y in range(h):
         for x in range(w):
             idx = get_pos(x, y, w)
             color = color_data[x][y]
-            colors[idx] = (color >> 16) & 0xff
-            colors[idx + 1] = (color >> 8) & 0xff
-            colors[idx + 2] = color & 0xff
-    return colors
+            pixels[idx] = (color >> 16) & 0xff
+            pixels[idx + 1] = (color >> 8) & 0xff
+            pixels[idx + 2] = color & 0xff
+
+
+class JuliaScreen(pyg.screen.GraphScreen):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.mode = 1
+        # rawdata = np.zeros(self.w * self.h * 3, dtype=np.ubyte).ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte))
+        self.pixels = np.zeros(self.w * self.h * 3, dtype=np.ubyte)
+        self.ctpixels = np.ctypeslib.as_ctypes(self.pixels)
+        self.img = pyglet.image.ImageData(self.w, self.h, 'RGB', self.ctpixels)
+
+        self.palette = np.array([[0, 0, 0], [100, 0, 100], [255, 255, 255], [255, 161, 3]], dtype=np.int32)
+
+    def set_mode(self, mode):
+        """
+        Sets the mode and resets
+        :param mode: mode
+        """
+        self.mode = mode
+        self.reset_screen()
+
+    def reset_screen(self):
+        """
+        Resets the graph
+        """
+        self.set_val('max_iter', 24)
+        super().reset_screen()
+
+    def render(self):
+        """
+        Renders the screen and creates an image with the pixel data
+        """
+        # calc
+        start = time.time()
+        bl_x, bl_y = self.on_plot(0, 0)
+        tr_x, tr_y = self.on_plot(self.w, self.h)
+        c = self.get_val('c')
+        max_iter = self.get_val('max_iter')
+        self.palette[self.get_val('pal_idx')] = [self.get_val('pal_r'), self.get_val('pal_g'), self.get_val('pal_b')]
+        limit = self.get_val('limit')
+        # colors = get_data(self.mode, self.w, self.h, bl_x, bl_y, tr_x, tr_y, limit, max_iter, c, self.palette)
+        get_data(self.mode, self.w, self.h, bl_x, bl_y, tr_x, tr_y, limit, max_iter, c, self.palette, self.pixels)
+        end = time.time()
+        self.valset.set_val('calctime', ((end - start) * 1000))
+
+        # flush
+        start = time.time()
+        if self.mode != 7:
+            # convert to ctypes ubyte array
+            # rawdata = colors.astype(np.ubyte).ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte))
+            # self.img = pyglet.image.ImageData(self.w, self.h, 'RGB', rawdata)
+            self.img.set_data('RGB', self.img.width * 3, self.ctpixels)
+        else:
+            points = []
+            point_colors = []
+            for i in range(self.w):
+                for j in range(self.h):
+                    idx = get_pos(i, j, self.w)
+                    points.extend([i, j, 0])
+                    point_colors.extend([self.pixels[idx], self.pixels[idx + 1], self.pixels[idx + 2]])
+            self.set_points(points, point_colors)
+            self.flush()
+        end = time.time()
+        self.valset.set_val('flushtime', ((end - start) * 1000))
+
+    def draw(self):
+        """
+        Draws the image created in render()
+        """
+        if self.mode != 7:
+            self.img.blit(self.x, self.y)
+        else:
+            super().draw()
+
+    def resize(self, width, height):
+        # renders after resizing
+        if self.mode != 7:
+            self.refit(width, height - 200)
+            del self.img, self.pixels, self.ctpixels
+            self.pixels = np.zeros(self.w * self.h * 3, dtype=np.ubyte)
+            self.ctpixels = np.ctypeslib.as_ctypes(self.pixels)
+            self.img = pyglet.image.ImageData(self.w, self.h, 'RGB', self.ctpixels)
+        else:
+            self.refit(width // 2, height - 200)
+
+    def mouse_move(self, x, y, dx, dy):
+        if self.is_inside(x + self.x, y + self.y) and self.get_val('mouse_c'):
+            cx, cy = self.on_plot(x, y)
+            self.set_val('c', cx + cy * 1j)
 
 
 class MandelScreen(pyg.screen.GraphScreen):
@@ -298,92 +385,6 @@ class MandelScreen(pyg.screen.GraphScreen):
         pass
 
 
-class JuliaScreen(pyg.screen.GraphScreen):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.mode = 1
-        # -.743643887037151, 0.131825904205330, .000000000051299, .000000000051299
-        rawdata = np.zeros(self.w * self.h * 3, dtype=np.ubyte).ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte))
-        self.img = pyglet.image.ImageData(self.w, self.h, 'RGB', rawdata)
-
-        self.palette = np.array([[0, 0, 0], [100, 0, 100], [255, 255, 255], [255, 161, 3]], dtype=np.int32)
-
-    def set_mode(self, mode):
-        """
-        Sets the mode and resets
-        :param mode: mode
-        """
-        self.mode = mode
-        self.reset_screen()
-
-    def reset_screen(self):
-        """
-        Resets the graph
-        """
-        self.set_val('max_iter', 24)
-        super().reset_screen()
-
-    def render(self):
-        """
-        Renders the screen and creates an image with the pixel data
-        """
-        #calc
-        start = time.time()
-        bl_x, bl_y = self.on_plot(0, 0)
-        tr_x, tr_y = self.on_plot(self.w, self.h)
-        c = self.get_val('c')
-        max_iter = self.get_val('max_iter')
-        self.palette[self.get_val('pal_idx')] = [self.get_val('pal_r'), self.get_val('pal_g'), self.get_val('pal_b')]
-        limit = self.get_val('limit')
-        colors = get_data(self.mode, self.w, self.h, bl_x, bl_y, tr_x, tr_y, limit, max_iter, c, self.palette)
-        end = time.time()
-        self.valset.set_val('calctime', ((end - start) * 1000))
-
-        #flush
-        start = time.time()
-        if self.mode != 7:
-            # convert to ctypes ubyte array
-            del self.img
-            rawdata = colors.astype(np.ubyte).ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte))
-            self.img = pyglet.image.ImageData(self.w, self.h, 'RGB', rawdata)
-        else:
-            points = []
-            point_colors = []
-            for i in range(self.w):
-                for j in range(self.h):
-                    idx = get_pos(i, j, self.w)
-                    points.extend([i, j, 0])
-                    point_colors.extend([colors[idx], colors[idx + 1], colors[idx + 2]])
-            self.set_points(points, point_colors)
-            self.flush()
-        end = time.time()
-        self.valset.set_val('flushtime', ((end - start) * 1000))
-
-    def draw(self):
-        """
-        Draws the image created in render()
-        """
-        #super().draw()
-        if self.mode != 7:
-            self.img.blit(self.x, self.y)
-        else:
-            super().draw()
-
-    def resize(self, width, height):
-        if self.mode != 7:
-            self.refit(width, height - 200)
-        else:
-            self.refit(width // 2, height - 200)
-
-    def mouse_move(self, x, y, dx, dy):
-        if self.is_inside(x + self.x, y + self.y) and self.get_val('mouse_c'):
-            cx, cy = self.on_plot(x, y)
-            self.set_val('c', cx + cy * 1j)
-
-    def mouse_drag(self, x, y, dx, dy, buttons, modifiers):
-        pass
-
-
 class JuliaWindow(pyg.window.Window):
     def load_graph_coords(self):
         """
@@ -419,7 +420,6 @@ class JuliaWindow(pyg.window.Window):
         Creates a default graph coordinate file
         """
         file = open('julia_graph_coords.txt', 'w')
-        #file.write('1,-.743643887037151,0.131825904205330,.000000000051299,.000000000051299')
         file.write('1,-.743643887037151,0.131825904205330,9500000000000000000000,5000')
         file.close()
         self.load_graph_coords()
@@ -448,17 +448,17 @@ class JuliaWindow(pyg.window.Window):
         self.valset.add_int_value('max_iter', 24, limit='l', low=1)
         self.valset.add_float_value('limit', 20.0, limit='l', inclusive='', low=0)
         self.valset.add_complex_value('c', -.25 -.67j)
-        self.valset.add_float_value('calctime', 0.0)
-        self.valset.add_float_value('flushtime', 0.0)
+        self.valset.add_float_value('calctime', 0)
+        self.valset.add_float_value('flushtime', 0)
         self.valset.add_int_value('pal_idx', 0, limit='ul', low=0, high=3)
         self.valset.add_int_value('pal_r', 0)
         self.valset.add_int_value('pal_g', 0)
         self.valset.add_int_value('pal_b', 0)
         self.valset.add_bool_value('mouse_c', False)
-        self.valset.add_float_value('saved_gx', 0.0)
-        self.valset.add_float_value('saved_gy', 0.0)
-        self.valset.add_float_value('saved_gw', 0.0)
-        self.valset.add_float_value('saved_gh', 0.0)
+        self.valset.add_float_value('saved_gx', 0)
+        self.valset.add_float_value('saved_gy', 0)
+        self.valset.add_float_value('saved_gw', 0)
+        self.valset.add_float_value('saved_gh', 0)
 
         main = JuliaScreen(self, 0, 200, 500, 500, 0, 0, 5, 5, 'gz')
         self.add_screen('main', main)
@@ -512,7 +512,7 @@ class JuliaWindow(pyg.window.Window):
         self.add_label('calclabel', self.width - 140, 170, '  calc time: %.3f' % self.valset.get_val('calctime'), color=(0, 240, 120))
         self.add_label('flushlabel', self.width - 140, 155, ' flush time: %.3f' % self.valset.get_val('flushtime'), color=(0, 240, 120))
 
-        self.saved_coords = [[],[],[],[],[],[],[]]
+        self.saved_coords = [[], [], [], [], [], [], []]
         self.load_graph_coords()
 
     def palette_left(self):
@@ -530,9 +530,9 @@ class JuliaWindow(pyg.window.Window):
         self.set_val('pal_r', main.palette[pal_idx][0])
         self.set_val('pal_g', main.palette[pal_idx][1])
         self.set_val('pal_b', main.palette[pal_idx][2])
-        self.get_slider('pal_r').update()
-        self.get_slider('pal_g').update()
-        self.get_slider('pal_b').update()
+        # self.get_slider('pal_r').update()
+        # self.get_slider('pal_g').update()
+        # self.get_slider('pal_b').update()
 
     def saved_coords_prev(self):
         mode = self.get_screen('main').mode
@@ -629,18 +629,17 @@ class JuliaWindow(pyg.window.Window):
             self.screens['mandel'].off()
         self.screens['main'].set_mode(mode)
         self.on_resize(self.width, self.height)
-        #self.mouse_up(100, 250, pyglet.window.mouse.RIGHT, None)
+        # self.mouse_up(100, 250, pyglet.window.mouse.RIGHT, None)
 
     def update_labels(self):
-        self.labels['leftlabel'].set_text('%.5f' % self.get_screen('main').min_gx)
-        self.labels['rightlabel'].set_text('%.5f' % self.get_screen('main').max_gx)
+        self.labels['leftlabel'].set_text('%.5E' % self.get_screen('main').min_gx)
+        self.labels['rightlabel'].set_text('%.5E' % self.get_screen('main').max_gx)
         self.labels['rightlabel'].set_pos(self.width - 60, 180)
         self.labels['toplabel'].set_text('%.5f' % self.get_screen('main').max_gy)
         self.labels['toplabel'].set_pos(10, self.height - 20)
         self.labels['bottomlabel'].set_text('%.5f' % self.get_screen('main').min_gy)
         self.get_label('zoomlabel').set_pos(self.width * 3 // 5, 180)
         self.get_label('zoomlabel').set_text('Zoom: %.5E' % self.get_screen('main').total_zoom)
-
 
         mode = self.get_screen('main').mode
         if mode in [0, 2, 4, 6] and len(self.saved_coords[mode]):
@@ -666,7 +665,6 @@ class JuliaWindow(pyg.window.Window):
             self.get_label('saved_coords_zoom').set_text('')
             self.get_label('saved_coords_idx').set_text('')
 
-
         self.labels['calclabel'].set_text('  calc time: %.3f ms' % self.valset.get_val('calctime'))
         self.labels['calclabel'].set_pos(self.width - 140, 165)
         self.labels['flushlabel'].set_text(' flush time: %.3f ms' % self.valset.get_val('flushtime'))
@@ -686,7 +684,6 @@ class JuliaWindow(pyg.window.Window):
     def key_down(self, symbol, modifiers):
         super().key_down(symbol, modifiers)
         if not self.focus:
-            main = self.get_screen('main')
             if symbol == pyglet.window.key.C:
                 self.get_button('mouse_c').toggle()
             if symbol == pyglet.window.key.R:
@@ -700,8 +697,8 @@ class JuliaWindow(pyg.window.Window):
                     self.saved_coords_goto()
                 if symbol == pyglet.window.key.S:
                     self.saved_coords_save()
-                if symbol == pyglet.window.key.Y:
+                if symbol == pyglet.window.key.P:
                     self.saved_coords_delete()
 
 
-pyg.run(JuliaWindow, 500, 700, caption='Julia Graph')
+pyg.run(JuliaWindow, 500, 700, caption='Mandelbrot Explorer')

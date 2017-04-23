@@ -18,8 +18,11 @@ add updatefunc to sliders
 is there any point of having focusable
 redo focus logic for more modularity
 
-add parent and batch as first arguments
+add parent and batch as first arguments and name
 pass all valobjs by string
+add update to all guiobjects?
+
+redo documentation
 """
 
 

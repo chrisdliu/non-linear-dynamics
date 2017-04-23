@@ -29,7 +29,12 @@ class Value(object):
         """
         new_value = self.cast(new_value)
         if new_value is not None and self.is_valid(new_value):
-            self.value = new_value
+            if self.value != new_value:
+                self.value = new_value
+                return 1
+            else:
+                self.value = new_value
+                return 0
 
     def cast(self, cast_value):
         return cast_value
@@ -176,7 +181,7 @@ class ComplexValue(NumberValue):
     """
 
     def __str__(self):
-        return '%f + %fj' % (round(self.value.real, 3), round(self.value.imag, 3))
+        return '%s + %sj' % (str(round(self.value.real, 3)), str(round(self.value.imag, 3)))
 
     def cast(self, cast_value):
         if isinstance(cast_value, complex):
