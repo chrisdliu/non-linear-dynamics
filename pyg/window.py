@@ -188,6 +188,9 @@ class Window(_win.Window):
     def add_complex_field(self, name, x, y, w, h, field_name, valobj, visible=True, interfaced=False):
         self.fields[name] = ComplexField(self, name, x, y, w, h, field_name, valobj, visible, interfaced)
 
+    def add_string_field(self, name, x, y, w, h, field_name, valobj, visible=True):
+        self.fields[name] = StringField(self, name, x, y, w, h, field_name, valobj, visible, False)
+
     def add_int_hslider(self, name, x, y, w, h, field_name, valobj, low=None, high=None, updatefunc=None, visible=True, interfaced=False):
         self.sliders[name] = IntHSlider(self, name, x, y, w, h, field_name, valobj, low, high, updatefunc, visible, interfaced)
 
@@ -280,7 +283,7 @@ class Window(_win.Window):
         """
         self.valset.add_complex_value(name, value, limit, inclusive, low, high)
 
-    def add_bool_value(self, name, value):
+    def add_bool_value(self, name, value=False):
         """
         Adds a bool value to the window's value set.
 
@@ -290,6 +293,9 @@ class Window(_win.Window):
         :param value: the initial value
         """
         self.valset.add_bool_value(name, value)
+
+    def add_string_value(self, name, value=''):
+        self.valset.add_string_value(name, value)
 
     def add_color_value(self, name, value='#000000'):
         """

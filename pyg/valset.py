@@ -260,6 +260,18 @@ class ColorValue(Value):
         else:
             return False
 
+
+class StringValue(Value):
+    def cast(self, cast_value):
+        if isinstance(cast_value, str):
+            return cast_value
+        else:
+            try:
+                return str(cast_value)
+            except ValueError:
+                return None
+
+
 class ValSet:
     """
     A collection of values.
@@ -342,6 +354,9 @@ class ValSet:
         :param value: the initial value
         """
         self.vals[name] = BoolValue(value)
+
+    def add_string_value(self, name, value):
+        self.vals[name] = StringValue(value)
 
     def add_color_value(self, name, value):
         self.vals[name] = ColorValue(value)

@@ -5,6 +5,7 @@ import pyglet
 from numba import jit, vectorize, guvectorize
 
 import pyg
+from Mandelbrot.emailer import email
 
 
 @vectorize('float64(complex128, complex128, float64, int32)', target='parallel')
@@ -250,18 +251,24 @@ class JuliaWindow(pyg.window.Window):
         self.add_button('m1b', 10, 110, 80, 15, 'Mandelbrot', lambda: self.set_mode(1))
         self.add_button('m7b', 10, 90, 80, 15, 'Both', lambda: self.set_mode(2))
         self.add_button('resetb', 10, 10, 50, 45, 'Reset\nScreen\nView(r)', self.reset)
-        self.add_toggle_button('mouse_c', 80, 10, 50, 30, 'Mouse\nSet C(c)', self.get_valobj('mouse_c')).off()
+        self.add_toggle_button('mouse_c', 80, 10, 50, 30, 'Mouse\nSet C(c)', self.get_valobj('mouse_c'))
+        self.buttons['mouse_c'].off()
 
         self.add_int_field('max_iter', 150, 180, 120, 15, 'Max Iter', self.get_valobj('max_iter'))
         self.add_label('c', 150, 150)
 
-        self.add_button('pal_left', 150, 5, 55, 15, 'Idx Left', self.palette_left)
-        self.add_button('pal_right', 215, 5, 55, 15, 'Idx Right', self.palette_right)
+        self.add_button('pal_left', 150, 5, 55, 15, 'Left', self.palette_left)
+        self.add_button('pal_right', 215, 5, 55, 15, 'Right', self.palette_right)
         self.add_int_hslider('pal_r', 150, 70, 120, 15, 'Red  ', self.get_valobj('pal_r'), 0, 255, lambda: self.boxes['colorbox'].render())
         self.add_int_hslider('pal_g', 150, 50, 120, 15, 'Green', self.get_valobj('pal_g'), 0, 255, lambda: self.boxes['colorbox'].render())
         self.add_int_hslider('pal_b', 150, 30, 120, 15, 'Blue ', self.get_valobj('pal_b'), 0, 255, lambda: self.boxes['colorbox'].render())
         self.add_box('colorbox', ColorBox(self, 'colorbox', 150, 90, 120, 30, self.screens['main'].palette))
         self.add_label('pal_label', 160, 125, 'Palette:')
+
+        self.add_string_value('email')
+        self.add_string_field('email', 300, 80, 180, 15, 'Email', self.get_valobj('email'))
+        self.add_button('clearemail', 350, 30, 40, 30, 'Clear\nEmail', self.clear_email)
+        self.add_button('sendimage', 300, 30, 40, 30, 'Send\nImage', self.send_image)
 
         self.add_label('leftlabel', color=(255, 0, 255))
         self.add_label('rightlabel', color=(255, 0, 255))
@@ -271,6 +278,13 @@ class JuliaWindow(pyg.window.Window):
 
         self.add_label('calclabel', color=(0, 240, 120))
         self.add_label('flushlabel', color=(0, 240, 120))
+
+    def send_image(self):
+        self.screens['main'].img.save('screen.png')
+        email(self.get_val('email'))
+
+    def clear_email(self):
+        self.fields['email'].clear()
 
     def palette_left(self):
         self.get_valobj('pal_idx').decr()

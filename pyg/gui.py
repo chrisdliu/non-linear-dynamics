@@ -599,6 +599,36 @@ class ComplexField(NumberField):
         super().__init__(parent, name, x, y, w, h, field_name, valobj, visible, interfaced)
 
 
+class StringField(Field):
+    def __init__(self, parent, name, x, y, w, h, field_name, valobj, visible=True, interfaced=False):
+        if type(valobj) is not StringValue:
+            raise TypeError('Value object is not a StringValue!')
+        super().__init__(parent, name, x, y, w, h, field_name, valobj, visible, interfaced)
+
+    def focus_on(self):
+        self.update_color()
+        self.update_label()
+        if self.focusable:
+            self.is_focus = True
+            self.render()
+
+    def focus_off(self):
+        self.valobj.set_val(self.input)
+        self.is_focus = False
+        self.render()
+
+    def text_input(self, text):
+        self.input += text
+        self.update_color()
+        self.update_label()
+
+    def clear(self):
+        self.input = ''
+        self.valobj.set_val('')
+        self.update_color()
+        self.update_label()
+
+
 class Slider(GuiComponent):
     def __init__(self, parent, name, x, y, w, h, valobj, low=None, high=None, updatefunc=None, visible=True, interfaced=False):
         super().__init__(parent, name, x, y, w, h, True, visible, interfaced)
