@@ -249,7 +249,6 @@ class JuliaWindow(pyg.window.Window):
 
         self.add_button('m0b', 10, 130, 80, 15, 'Julia', lambda: self.set_mode(0))
         self.add_button('m1b', 10, 110, 80, 15, 'Mandelbrot', lambda: self.set_mode(1))
-        self.add_button('m7b', 10, 90, 80, 15, 'Both', lambda: self.set_mode(2))
         self.add_button('resetb', 10, 10, 50, 45, 'Reset\nScreen\nView(r)', self.reset)
         self.add_toggle_button('mouse_c', 80, 10, 50, 30, 'Mouse\nSet C(c)', self.get_valobj('mouse_c'))
         self.buttons['mouse_c'].off()
