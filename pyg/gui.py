@@ -377,10 +377,23 @@ class Button(GuiComponent):
         super().__init__(parent, name, x, y, width, height, True, visible, interfaced)
         self.action = action
         self.argsfunc = argsfunc
+        self.text = text
         lines = text.split('\n')
         for i in range(len(lines)):
             self.add_label('label_%d' % i, x + width / 2, y + height - (i + 1) * (height / (len(lines) + 1)), lines[i],
-                           anchor_x='center', anchor_y='center', width=width)
+                           anchor_x='center', anchor_y='center', width=width, visible=visible)
+
+    def on(self):
+        super().on()
+        lines = self.text.split('\n')
+        for i in range(len(lines)):
+            self.labels['label_%d' % i].on()
+
+    def off(self):
+        super().off()
+        lines = self.text.split('\n')
+        for i in range(len(lines)):
+            self.labels['label_%d' % i].off()
 
     def mouse_up(self, x, y, buttons, modifiers):
         if self.action:

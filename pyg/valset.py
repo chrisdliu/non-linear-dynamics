@@ -16,6 +16,8 @@ class Value(object):
 
         :param value: the initial value
         """
+        if not self.is_valid(value):
+            raise ValueError('Initial value is not valid!')
         self.value = value
 
     def __str__(self):
@@ -82,13 +84,11 @@ class NumberValue(Value):
         :type low: float
         :param high: upper limit
         """
-        super().__init__(value)
         self.limit = limit
         self.inclusive = inclusive
         self.low = low
         self.high = high
-        if not self.is_valid(value):
-            raise ValueError('Initial value is not valid!')
+        super().__init__(value)
 
     def incr(self):
         """
@@ -282,6 +282,9 @@ class ValSet:
 
     def add_value(self, name, value):
         self.vals[name] = Value(value)
+
+    def add_generic_valobj(self, name, valobj):
+        self.vals[name] = valobj
 
     def add_int_value(self, name, value, limit='', inclusive='ul', low=0, high=1):
         """

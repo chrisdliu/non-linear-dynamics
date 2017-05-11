@@ -179,6 +179,9 @@ class Window(_win.Window):
         """
         self.buttons[name] = ToggleButton(self, name, x, y, width, height, text, boolval, visible, interfaced)
 
+    def add_generic_field(self, name, FieldCls, x, y, w, h, field_name, valobj, visible=True, interfaced=False):
+        self.fields[name] = FieldCls(self, name, x, y, w, h, field_name, valobj, visible, interfaced)
+
     def add_int_field(self, name, x, y, w, h, field_name, valobj, visible=True, interfaced=False):
         self.fields[name] = IntField(self, name, x, y, w, h, field_name, valobj, visible, interfaced)
 
@@ -219,8 +222,8 @@ class Window(_win.Window):
     # endregion
 
     # region valset functions
-    def add_value(self, name, value):
-        self.valset.add_value(name, value)
+    def add_generic_valobj(self, name, valobj):
+        self.valset.add_generic_valobj(name, valobj)
 
     def add_int_value(self, name, value=0, limit='', inclusive='ul', low=0, high=1):
         """
