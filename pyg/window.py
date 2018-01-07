@@ -71,8 +71,10 @@ class Window(_win.Window):
         if ticktime > 0:
             _clock.schedule_interval(self.tick, ticktime)
 
+        '''
         if isinstance(self, _win.cocoa.CocoaWindow):
             self.on_resize = self._retina_on_resize
+        '''
 
     def set_vars(self):
         """
